@@ -1,0 +1,35 @@
+{
+    "name": "AURA",
+    "short_name": "AURA",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F6F2E8",
+    "theme_color": "#772F3D",
+    "description": "C\u1ea3m nh\u1eadn tranh Ph\u1ee5c H\u01b0ng qua \u0111\u1ed1i tho\u1ea1i Socrates",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
