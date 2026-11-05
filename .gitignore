@@ -1,0 +1,31 @@
+# Môi trường ảo (mỗi máy tự tạo bằng: python -m venv .venv)
+.venv/
+venv/
+
+# Python sinh ra khi chạy
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Khoá bí mật đăng nhập: KHÔNG BAO GIỜ đưa lên Git (chỉ đưa .env.example)
+.env
+
+# Flet sinh ra khi chạy / đóng gói
+.flet/
+storage/
+build/
+
+# Cấu hình cá nhân của công cụ
+.claude/settings.local.json
+.vscode/
+.idea/
+
+# File rác của hệ điều hành
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Ảnh chụp, file tập khi học
+out/
+hoc/
+*.log

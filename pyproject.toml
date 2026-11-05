@@ -1,0 +1,20 @@
+[project]
+name = "aura"
+version = "1.0.0"
+description = "AURA — cảm nhận tranh Phục Hưng qua đối thoại Socrates"
+requires-python = ">=3.10"
+dependencies = ["flet==1.0.5", "httpx>=0.27"]
+
+[tool.flet]
+org = "app.aura"
+product = "AURA"
+company = "AURA"
+copyright = "© 2026 AURA"
+
+[tool.flet.app]
+path = "."
+module = "main"
+
+[tool.flet.android]
+# Quyền mạng cho đăng nhập và tải ảnh đại diện.
+permission."android.permission.INTERNET" = true

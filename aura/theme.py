@@ -1,0 +1,45 @@
+# ---- Màu -------------------------------------------------------------------
+BG = "#F6F2E8"          # nền giấy ngà
+INK = "#2F2A26"         # chữ chính
+MUTED = "#796E64"       # chữ phụ
+PRIMARY = "#772F3D"     # đỏ rượu vang (thương hiệu)
+SURFACE = "#FFFBF2"     # ô nhập liệu, nút viền
+BORDER = "#DBD1C3"      # viền, đường kẻ
+BEIGE = "#EDE6D8"       # thẻ nền be
+WHITE = "#FFFFFF"
+TINT = "#EFE2DF"        # hồng nhạt: chip, vòng năm, nút đang chọn
+GREEN = "#4BAF72"       # đúng
+GREEN_BG = "#EBF6EF"
+GREEN_INK = "#1D6B3B"
+WHY_BG = "#F4F9F6"      # hộp "Vì sao?"
+WHY_INK = "#2D5D3F"
+WHY_BORDER = "#A9D9BA"
+RED = "#D86B5B"         # sai / thử lại
+GOLD = "#E8A84B"        # huy hiệu
+SKELETON = "#E4DCCD"
+
+# ---- Font ------------------------------------------------------------------
+FONTS = {
+    "Inter": "fonts/Inter-Regular.ttf",
+    "InterMedium": "fonts/Inter-Medium.ttf",
+    "InterSemiBold": "fonts/Inter-SemiBold.ttf",
+    "InterBold": "fonts/Inter-Bold.ttf",
+    "InterItalic": "fonts/Inter-Italic.ttf",
+    "Lora": "fonts/Lora-Regular.ttf",
+    "LoraMedium": "fonts/Lora-Medium.ttf",
+    "Montserrat": "fonts/Montserrat-SemiBold.ttf",
+}
+
+INTER_BY_WEIGHT = {400: "Inter", 500: "InterMedium", 600: "InterSemiBold", 700: "InterBold"}
+
+# Khoảng cách dòng đo từ bản thiết kế.
+SANS_LINE_HEIGHT = {9: 1.4, 10: 1.5, 11: 1.545, 12: 1.5, 13: 1.54, 14: 1.5}
+SERIF_LINE_HEIGHT = {17: 1.3, 18: 1.2, 19: 1.316, 21: 1.19, 22: 1.2, 23: 1.26,
+                     24: 1.208, 27: 1.185, 29: 1.207, 32: 1.1, 35: 1.2}
+
+# ---- Bố cục ----------------------------------------------------------------
+GUTTER = 24             # lề trái/phải
+RADIUS = 8              # bo góc thẻ & nút chữ nhật
+BUTTON_H = 52
+TOP_BAR_H = 36
+NAV_H = 60

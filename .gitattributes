@@ -1,0 +1,7 @@
+# Thống nhất kiểu xuống dòng giữa Windows / macOS / Linux
+* text=auto
+
+# File nhị phân: không đổi gì
+*.ttf binary
+*.jpg binary
+*.png binary
