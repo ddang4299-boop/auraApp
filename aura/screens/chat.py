@@ -170,8 +170,10 @@ def _summary_card(app, p: Painting, s) -> ft.Control:
 
 MIN_THINK = 0.6          # giây: "đang suy nghĩ" hiện đủ lâu để không chớp tắt
 DOT = 6
-TYPE_TICK = 0.035        # giây giữa hai lần hiện thêm chữ (hiệu ứng "đang gõ")
-TYPE_PARA_MAX = 1.6      # một đoạn dài cỡ nào cũng gõ xong trong khoảng chừng này giây
+# Hiệu ứng "đang gõ": mỗi lần hiện thêm chữ là một lần gửi cập nhật từ Python sang màn hình.
+# Khi app chạy trên máy chủ (Render), gửi quá dày sẽ nghẽn mạng/CPU -> giới hạn ~14 lần mỗi đoạn.
+TYPE_TICK = 0.06         # giây giữa hai lần hiện thêm chữ
+TYPE_PARA_MAX = 0.85     # một đoạn dài cỡ nào cũng gõ xong trong khoảng chừng này giây
 WORD_RE = re.compile(r"\S+\s*")
 
 

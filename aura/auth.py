@@ -1,4 +1,4 @@
-"""Đăng nhập Google / Facebook bằng OAuth 2.0 cho ứng dụng cài đặt.
+"""Đăng nhập Google bằng OAuth 2.0 cho ứng dụng cài đặt.
 
 Luồng (chuẩn RFC 8252 cho app native): mở trình duyệt hệ thống tới trang
 đăng nhập của nhà cung cấp → người dùng đồng ý → nhà cung cấp chuyển hướng về
@@ -8,9 +8,7 @@ http://127.0.0.1:<cổng>/ nơi app đang lắng nghe → app đổi `code` lấ
 Cấu hình trong file `.env` ở thư mục gốc (xem `.env.example`):
     GOOGLE_CLIENT_ID=...            # loại "Desktop app" trong Google Cloud Console
     GOOGLE_CLIENT_SECRET=...
-    FACEBOOK_APP_ID=...
-    FACEBOOK_APP_SECRET=...
-    OAUTH_REDIRECT_PORT=8765        # Facebook cần đăng ký http://localhost:8765/
+    OAUTH_REDIRECT_PORT=8765        # cổng loopback nhận kết quả đăng nhập (tuỳ chọn)
 """
 from __future__ import annotations
 
@@ -50,7 +48,7 @@ class Profile:
     email: str = ""
     phone: str = ""
     avatar_url: str = ""
-    provider: str = ""            # google | facebook | phone | guest
+    provider: str = ""            # google | guest
     provider_id: str = ""
     birth_year: str = ""
     bio: str = ""
@@ -100,10 +98,6 @@ PROVIDERS = {
         "google", "Google", "https://accounts.google.com/o/oauth2/v2/auth",
         "https://oauth2.googleapis.com/token", "openid email profile",
         "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", True),
-    "facebook": _ProviderSpec(
-        "facebook", "Facebook", "https://www.facebook.com/v19.0/dialog/oauth",
-        "https://graph.facebook.com/v19.0/oauth/access_token", "public_profile,email",
-        "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET", False),
 }
 
 
@@ -113,10 +107,8 @@ def is_configured(provider: str) -> bool:
 
 
 def _redirect_uri(provider: str, port: int) -> str:
-    # Google (Desktop app) chấp nhận mọi cổng loopback 127.0.0.1;
-    # Facebook yêu cầu khớp chính xác URL đã đăng ký.
-    host = "127.0.0.1" if provider == "google" else "localhost"
-    return f"http://{host}:{port}/"
+    # Google (loại "Desktop app") chấp nhận mọi cổng loopback 127.0.0.1
+    return f"http://127.0.0.1:{port}/"
 
 
 _DONE_HTML = """<!doctype html><html lang="vi"><meta charset="utf-8">
@@ -194,22 +186,12 @@ async def sign_in(provider: str, open_url) -> Profile:
     if spec.use_pkce:
         data |= {"grant_type": "authorization_code", "code_verifier": verifier}
     async with httpx.AsyncClient(timeout=20) as http:
-        if provider == "google":
-            tok = (await http.post(spec.token_url, data=data)).json()
-            if "access_token" not in tok:
-                raise AuthError(tok.get("error_description") or "Không lấy được token Google.")
-            u = (await http.get("https://openidconnect.googleapis.com/v1/userinfo",
-                                headers={"Authorization": f"Bearer {tok['access_token']}"})).json()
-            return Profile(name=u.get("name", ""), email=u.get("email", ""),
-                           avatar_url=u.get("picture", ""), provider="google",
-                           provider_id=str(u.get("sub", "")),
-                           linked={"google": u.get("email", "")})
-        tok = (await http.get(spec.token_url, params=data)).json()
+        tok = (await http.post(spec.token_url, data=data)).json()
         if "access_token" not in tok:
-            raise AuthError((tok.get("error") or {}).get("message", "Không lấy được token Facebook."))
-        u = (await http.get("https://graph.facebook.com/me", params={
-            "fields": "id,name,email,picture.type(large)", "access_token": tok["access_token"]})).json()
-        pic = ((u.get("picture") or {}).get("data") or {}).get("url", "")
-        return Profile(name=u.get("name", ""), email=u.get("email", ""), avatar_url=pic,
-                       provider="facebook", provider_id=str(u.get("id", "")),
-                       linked={"facebook": u.get("email") or u.get("name", "")})
+            raise AuthError(tok.get("error_description") or "Không lấy được token Google.")
+        u = (await http.get("https://openidconnect.googleapis.com/v1/userinfo",
+                            headers={"Authorization": f"Bearer {tok['access_token']}"})).json()
+        return Profile(name=u.get("name", ""), email=u.get("email", ""),
+                       avatar_url=u.get("picture", ""), provider="google",
+                       provider_id=str(u.get("sub", "")),
+                       linked={"google": u.get("email", "")})

@@ -6,6 +6,7 @@ services:
     name: aura
     runtime: python
     plan: free
+    region: singapore        # gần Việt Nam nhất -> ít trễ; KHÔNG đổi được sau khi đã tạo dịch vụ
     buildCommand: pip install -r requirements-server.txt
     startCommand: python main.py
     envVars:
@@ -22,4 +23,10 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      # Đăng nhập Google (OAuth client loại "Web application", redirect URI:
+      # https://<link-render>/oauth_callback). Client ID là công khai; secret thì nhập trên Render.
+      - key: GOOGLE_CLIENT_ID
+        value: 707169689924-rm36rpd5j7i0eas6f98g8m05dk71o78h.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
         sync: false

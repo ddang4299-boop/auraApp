@@ -175,6 +175,10 @@ class AuraChatbotEngine:
         q = r["question"]
         engine_chips = q["suggestions"] if q else []
         node = r["state"].get("node") or {}
+        if node.get("id") == "CROSS":
+            # câu so sánh hai chi tiết: mời người dùng tự gõ; chip câu hỏi chung chung chỉ dẫn tới
+            # "chưa có thông tin đáng tin cậy" nên không hiện
+            return []
         if not q or node.get("type") != "question" or node.get("id") == EXIT_Q:
             return engine_chips
         node_def = self.hub.engine(session.script_id).q.get(node["id"], ({},))[0]

@@ -198,6 +198,16 @@ class Engine:
 
         contexts = self._take_contexts(s, qn, opt, sig)
 
+        # ---- ở câu chào mà user hỏi về tranh: trả lời bằng thông tin có sẵn (nếu có) rồi vào Q1,
+        #      không đứng lại lặp lời chào ----
+        plain_question = bool(QUESTION_RE.search(text.lower())) and not contexts \
+            and not sig["detail_branch"] and not sig["emotion_letter"]
+        if node["id"] == "OPENING" and (not sig["answers_current"] or plain_question):
+            ack = "" if contexts else (f"Đây là bức {self.title} của {self.artist}. Mình sẽ kể thêm khi bạn "
+                                       "cần; trước hết, mình cùng nhìn tranh một chút nhé.")
+            s["node"] = self._resolve(s, node["after"], node, sig)
+            return self._pack(s, ack, contexts, sig=sig)
+
         # ---- user hỏi ngược, chưa trả lời câu hiện tại ----
         if not sig["answers_current"] and not opt:
             if sig["asks_unknown"] and not contexts:
@@ -310,8 +320,9 @@ class Engine:
         if not lst:
             return []
         k = s["hints_used"].get(self._key(node), 0)
-        start = (k * 3) % len(lst)
-        idxs = [(start + i) % len(lst) for i in range(min(3, len(lst)))]
+        n = 4 if node["id"] == "OPENING" else 3          # câu chào: hiện đủ các lối vào
+        start = (k * n) % len(lst)
+        idxs = [(start + i) % len(lst) for i in range(min(n, len(lst)))]
         return [{"id": f"p{i}", "text": lst[i], "kind": "prompt"} for i in idxs]
 
     # ======================================================================

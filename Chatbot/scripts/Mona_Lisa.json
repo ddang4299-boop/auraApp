@@ -19,7 +19,13 @@
       "input_type": "choice_with_free_input: hiển thị options + cho nhập tự do. free_text: chỉ nhập tự do.",
       "context": "Danh sách mã context (C1-C8) cần hiển thị TRƯỚC câu hỏi kế tiếp."
     },
-    "opening_question": "Chào bạn, mình là AURA. Hôm nay mình cùng nhau nhìn chậm bức Mona Lisa nhé. Trước khi bắt đầu, bạn mong muốn tìm hiểu gì về bức tranh này?"
+    "opening_question": "Chào bạn, mình là AURA. Hôm nay mình cùng nhau nhìn chậm bức Mona Lisa nhé. Trước khi bắt đầu, bạn mong muốn tìm hiểu gì về bức tranh này?",
+    "starter_prompts": [
+      "Mình muốn tự cảm nhận bức tranh trước",
+      "Người phụ nữ trong tranh là ai?",
+      "Bức tranh được vẽ khi nào?",
+      "Vì sao bức tranh này nổi tiếng?"
+    ]
   },
   "general_rules": {
     "options_per_question": "3-5 gợi ý kèm lựa chọn nhập tự do (free input)",

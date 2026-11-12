@@ -102,7 +102,7 @@ def primary_button(text: str, on_click: Handler = None, *, leading: str | None =
 
 
 def outline_button(text: str, on_click: Handler = None, height: float = BUTTON_H) -> ft.Container:
-    """Nút nền kem viền be, chữ đỏ rượu (đăng nhập Google/Facebook)."""
+    """Nút nền kem viền be, chữ đỏ rượu."""
     return ft.Container(
         content=T(text, 14, 600, PRIMARY), height=height, bgcolor=SURFACE,
         border=ft.Border.all(1, BORDER), border_radius=RADIUS,
@@ -355,7 +355,7 @@ __all__ = [n for n in dir() if not n.startswith("_")] + ["_status_bar"]
 
 
 def avatar(profile, size: float = 36, on_click: Handler = None) -> ft.Container:
-    """Ảnh đại diện tròn: ảnh từ Google/Facebook nếu có, không thì chữ cái đầu."""
+    """Ảnh đại diện tròn: ảnh từ tài khoản Google nếu có, không thì chữ cái đầu."""
     if profile is not None and getattr(profile, "avatar_url", ""):
         inner: ft.Control = ft.Image(src=profile.avatar_url, width=size, height=size,
                                      fit=ft.BoxFit.COVER,

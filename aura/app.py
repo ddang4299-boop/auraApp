@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import importlib
 import json
+import os
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlsplit
 
@@ -41,7 +42,6 @@ class ChatState:
 
 @dataclass
 class AppState:
-    phone: str = ""
     profile: Profile | None = None
     saved: set[str] = field(default_factory=set)
     quizzes: dict[str, QuizState] = field(default_factory=dict)
@@ -56,8 +56,6 @@ class AppState:
 
 # (tiền tố đường dẫn, module, hàm)
 ROUTES = [
-    ("/login/phone", "auth", "phone"),
-    ("/login/otp", "auth", "otp"),
     ("/home", "home", "build"),
     ("/gallery", "gallery", "build"),
     ("/saved", "gallery", "saved"),
@@ -135,10 +133,6 @@ class AuraApp:
     @staticmethod
     def _parent(route: str) -> str:
         path = urlsplit(route).path
-        if path.startswith("/login/otp"):
-            return "/login/phone"
-        if path.startswith("/login"):
-            return "/"
         if path.startswith(("/chat/", "/detail/", "/quiz/", "/result/")):
             return "/painting/" + path.split("/")[2]
         if path.startswith("/painting/"):
@@ -240,13 +234,16 @@ class AuraApp:
         self.go("/home") 
 
     def social_login(self, provider: str, *, link: bool = False) -> None:
-        """Đăng nhập (hoặc liên kết thêm) tài khoản Google/Facebook."""
+        """Đăng nhập (hoặc liên kết) tài khoản Google."""
         self.page.run_task(self._social_login, provider, link)
 
     async def _social_login(self, provider: str, link: bool) -> None:
         label = auth.PROVIDERS[provider].label
         if not auth.is_configured(provider):
             self._not_configured_dialog(provider, link)
+            return
+        if self.page.web:                 # bản web / máy chủ (Render): chuyển hướng tới trang Google
+            await self._web_login(provider, link)
             return
         snack(self.page, f"Đang mở trình duyệt để đăng nhập {label}…")
         try:
@@ -257,6 +254,45 @@ class AuraApp:
         except Exception as e:      # lỗi mạng...
             snack(self.page, f"Không kết nối được tới {label}: {e}")
             return
+        await self._apply_login(provider, prof, link)
+
+    # ---- đăng nhập trên bản web (chạy trên máy chủ) ------------------------------
+    def _public_url(self) -> str:
+        """Địa chỉ công khai của app. Render tự đặt RENDER_EXTERNAL_URL; nơi khác đặt PUBLIC_URL."""
+        url = os.environ.get("PUBLIC_URL") or os.environ.get("RENDER_EXTERNAL_URL") or self.page.url or ""
+        return url.rstrip("/")
+
+    async def _web_login(self, provider: str, link: bool) -> None:
+        """Cả tab chuyển sang trang đăng nhập Google (không mở popup vì Safari hay chặn).
+        Đăng nhập xong Google trả về <địa chỉ app>/oauth_callback, Flet nối lại đúng phiên này
+        và gọi _on_web_login. Địa chỉ đó phải được khai trong "Authorized redirect URIs"."""
+        from flet.auth.providers import GoogleOAuthProvider
+        spec = auth.PROVIDERS[provider]
+        oauth = GoogleOAuthProvider(
+            client_id=os.environ[spec.id_env], client_secret=os.environ[spec.secret_env],
+            redirect_url=f"{self._public_url()}/oauth_callback")
+        self._web_login_link = link
+        self.page.on_login = self._on_web_login
+
+        async def open_here(url: str) -> None:
+            await self.launcher.launch_url(url, web_only_window_name="_self")
+
+        snack(self.page, f"Đang chuyển tới trang đăng nhập {spec.label}…")
+        await self.page.login(oauth, redirect_to_page=True, on_open_authorization_url=open_here)
+
+    async def _on_web_login(self, e) -> None:
+        if e.error:
+            snack(self.page, f"Đăng nhập Google chưa thành công: {e.error_description or e.error}")
+            return
+        u = dict((self.page.auth.user if self.page.auth else None) or {})
+        email = u.get("email", "")
+        prof = Profile(name=u.get("name", ""), email=email, avatar_url=u.get("picture", ""),
+                       provider="google", provider_id=str(u.get("sub", "")), linked={"google": email})
+        await self._apply_login("google", prof, getattr(self, "_web_login_link", False))
+
+    async def _apply_login(self, provider: str, prof: Profile, link: bool) -> None:
+        """Đăng nhập xong: tạo phiên mới, hoặc gắn tài khoản vào hồ sơ đang dùng (liên kết)."""
+        label = auth.PROVIDERS[provider].label
         if link and self.state.profile is not None:
             cur = self.state.profile
             cur.linked[provider] = prof.linked.get(provider, prof.email)
@@ -276,8 +312,8 @@ class AuraApp:
             bgcolor=BG,
             title=T(f"Chưa cấu hình đăng nhập {spec.label}", 21, serif=True),
             content=T(f"Để đăng nhập thật, thêm {spec.id_env} và {spec.secret_env} vào file .env "
-                      f"ở thư mục dự án (xem README, mục Đăng nhập). Trong lúc chờ, bạn có thể "
-                      f"dùng thử bằng hồ sơ mẫu.", 13, 400, MUTED),
+                      f"(chạy trên máy) hoặc mục Environment trên Render (bản web). Trong lúc chờ, "
+                      f"bạn có thể dùng thử bằng hồ sơ mẫu.", 13, 400, MUTED),
             actions=[
                 ft.TextButton(content=T("Đóng", 13, 600, MUTED),
                               on_click=lambda e: self.page.pop_dialog()),
@@ -299,12 +335,6 @@ class AuraApp:
             self.rebuild()
         else:
             self.complete_sign_in(demo)
-
-    def phone_sign_in(self) -> None:
-        prof = self.state.profile or Profile(provider="phone")
-        prof.phone = "+84 " + self.state.phone if self.state.phone else prof.phone
-        prof.name = prof.name or "Bạn"
-        self.complete_sign_in(prof)
 
     def sign_out(self) -> None:
         async def _do():

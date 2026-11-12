@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <!-- Trang khung của bản web AURA (Flet tự chèn cấu hình vào chỗ "fletAppConfig").
+       Dựa trên index.html mặc định của flet-web 1.0.5, chỉnh cho iPhone (tai thỏ / Dynamic Island):
+       - nền kem cho cả trang và màu chủ đạo (theme-color) trùng nền app, để vùng quanh tai thỏ,
+         thanh trạng thái và thanh trình duyệt cùng màu với app thay vì trắng / hồng Flet;
+       - thanh trạng thái sáng chữ tối khi "Thêm vào MH chính";
+       - tên, mô tả, biểu tượng, màn chờ của AURA thay cho Flet.
+       Nội dung luôn nằm trong vùng an toàn: Flutter tự đặt thẻ viewport không có viewport-fit=cover,
+       nên tai thỏ / Dynamic Island / thanh Home không che giao diện. -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <!-- cho màn chờ hiện đúng cỡ trên điện thoại; khi app chạy, Flutter tự thay bằng thẻ viewport của nó -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="AURA: cùng nhìn chậm tranh Phục Hưng qua đối thoại.">
+
+  <!-- màu thanh trình duyệt / vùng quanh Dynamic Island = nền app -->
+  <meta name="theme-color" content="#F6F2E8">
+  <meta name="color-scheme" content="light">
+
+  <!-- iOS: khi thêm vào màn hình chính -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="AURA">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png" />
+
+  <title>AURA</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      margin: 0;
+      background-color: #F6F2E8;      /* vùng ngoài app (tai thỏ, kéo quá đà) cùng màu kem */
+      overscroll-behavior: none;     /* không kéo cả trang lên xuống như trang web */
+    }
+  </style>
+
+  <script>
+    // Giữ nguyên từ bản gốc của Flet: Safari/iOS khôi phục trang từ bộ nhớ đệm thì nạp lại,
+    // nếu không app sẽ đứng hình (phiên Flet nằm trên máy chủ nên không mất trạng thái).
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted &&
+        navigator.vendor && navigator.vendor.startsWith('Apple')) {
+        window.location.reload();
+      }
+    });
+  </script>
+
+  <script>
+    var flet = {
+      pyodide: false,
+      multiView: false,
+      noCdn: false,
+      webSocketEndpoint: "/ws",
+      entrypointBaseUrl: "/",
+      assetBase: "/",
+      routeUrlStrategy: "path",
+      canvasKitBaseUrl: null,
+      pyodideUrl: "/pyodide/pyodide.mjs",
+      webRenderer: "auto",
+      fontFallbackBaseUrl: null,
+      appPackageUrl: "app.tar.gz"
+    }
+
+    flet.flutterAppLoaded = new Promise((resolve) => {
+      flet.flutterAppResolve = resolve;
+    });
+
+    flet.flutterAppLoaded.then((flutterApp) => {
+      console.log("Flutter app loaded");
+    });
+  </script>
+
+  <!-- fletAppConfig -->
+
+  <script src="python.js"></script>
+</head>
+
+<body>
+  <div id="loading" role="status" aria-label="Đang mở AURA">
+    <style>
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #F6F2E8;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+
+      #loading .logo {
+        color: #772F3D;
+        font-size: 40px;
+        font-weight: 600;
+        letter-spacing: 1px;
+      }
+
+      #loading .bar {
+        width: 120px;
+        height: 3px;
+        border-radius: 2px;
+        background: #E4DCCD;
+        overflow: hidden;
+      }
+
+      #loading .bar::after {
+        content: "";
+        display: block;
+        width: 40%;
+        height: 100%;
+        background: #772F3D;
+        animation: aura-load 1.1s ease-in-out infinite;
+      }
+
+      #loading .hint {
+        color: #796E64;
+        font-size: 13px;
+      }
+
+      @keyframes aura-load {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(250%); }
+      }
+    </style>
+    <div class="logo">AURA</div>
+    <div class="bar"></div>
+    <div class="hint">Đang mở…</div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

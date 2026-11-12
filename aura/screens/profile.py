@@ -21,8 +21,9 @@ SOURCES = ("Thông tin tác phẩm: Bảo tàng Louvre (collections.louvre.fr). 
 TERMS = ("AURA chỉ dùng thông tin tài khoản (tên, email, số điện thoại, ảnh đại diện) để đăng "
          "nhập và hiển thị hồ sơ của bạn. Cảm nhận bạn chia sẻ được lưu trên thiết bị này.")
 
-PROVIDER_LABEL = {"google": "Google", "facebook": "Facebook", "phone": "số điện thoại",
-                  "guest": "chế độ khách"}
+# "facebook"/"phone": chỉ để hiển thị hồ sơ cũ đã lưu trên máy từ trước khi bỏ hai cách đăng nhập này
+PROVIDER_LABEL = {"google": "Google", "guest": "chế độ khách", "facebook": "Facebook",
+                  "phone": "số điện thoại"}
 
 
 def _field(label: str, value: str, *, hint: str = "", keyboard=None, multiline: bool = False,
@@ -110,7 +111,7 @@ def build(app, q) -> ft.View:
             sub = "Chưa liên kết"
         row = ft.Container(ft.Row([
             ft.Container(T(label[0], 15, 700, WHITE, lh=1.0), width=32, height=32, border_radius=16,
-                         bgcolor="#DB4437" if provider == "google" else "#1877F2",
+                         bgcolor="#DB4437",
                          alignment=ft.Alignment.CENTER),
             H(12),
             ft.Column([T(label, 13, 600, INK), V(1), T(sub, 11, 400, MUTED, max_lines=1)],
@@ -157,8 +158,8 @@ def build(app, q) -> ft.View:
         V(30),
         kicker("Tài khoản liên kết"),
         V(6),
-        card(ft.Column(linked_row("google", True) + linked_row("facebook", False), spacing=0,
-                       tight=True), padding=ft.Padding.symmetric(horizontal=16)),
+        card(ft.Column(linked_row("google", True), spacing=0, tight=True),
+             padding=ft.Padding.symmetric(horizontal=16)),
         V(30),
         kicker("Thông tin ứng dụng"),
         V(6),

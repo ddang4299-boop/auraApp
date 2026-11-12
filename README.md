@@ -39,10 +39,10 @@ aura/
   ui.py                 Component dùng chung: chữ, nút, chip, thẻ, top bar, thanh điều hướng
   data.py               Nội dung: tranh, mốc thời gian, khái niệm, quiz
   socratic.py           Bộ não hội thoại Socrates (interface + kịch bản mẫu)
-  auth.py               Đăng nhập Google / Facebook (OAuth 2.0 + PKCE)
+  auth.py               Đăng nhập Google (OAuth 2.0 + PKCE)
   app.py                Điều hướng, trạng thái, phiên đăng nhập
   screens/
-    auth.py             Chào mừng · Số điện thoại · OTP
+    auth.py             Chào mừng (đăng nhập Google hoặc bỏ qua)
     home.py             Khám phá
     gallery.py          Kho tranh · Đã lưu
     painting.py         Tổng quan tranh
@@ -67,7 +67,6 @@ docs/BAO_CAO.md         Báo cáo quá trình xây dựng giao diện
 | Đường dẫn | Màn hình |
 |---|---|
 | `/` | Chào mừng / đăng nhập |
-| `/login/phone`, `/login/otp` | Đăng nhập bằng số điện thoại |
 | `/home` | Khám phá (avatar góc phải → Hồ sơ) |
 | `/gallery`, `/saved` | Kho tranh, Đã lưu |
 | `/painting/<id>` | Tổng quan tranh |
@@ -119,22 +118,20 @@ file JSON trong `Chatbot/scripts/`.
 giai đoạn → `stage`...). Không cần sửa màn hình nào. `reply()` là `async` nên engine có thể gọi
 mạng/LLM; trong lúc chờ, giao diện tự hiện "AURA đang suy nghĩ…".
 
-## Đăng nhập Google / Facebook
+## Đăng nhập Google
 
 1. Sao chép `.env.example` thành `.env`.
 2. **Google**: Google Cloud Console → *APIs & Services* → *Credentials* → *Create OAuth client ID*
    → loại **Desktop app**. Điền `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
-3. **Facebook**: developers.facebook.com → tạo app → thêm *Facebook Login* → mục
-   *Valid OAuth Redirect URIs* thêm `http://localhost:8765/`. Điền `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`.
 
-Khi bấm "Tiếp tục với Google/Facebook", app mở trình duyệt hệ thống; sau khi đồng ý, trình duyệt
+Khi bấm "Tiếp tục với Google", app mở trình duyệt hệ thống; sau khi đồng ý, trình duyệt
 chuyển về `http://127.0.0.1:8765/` (app tự lắng nghe), app lấy tên, email và ảnh đại diện, rồi lưu phiên
-trên máy. Trong trang **Hồ sơ** có thể liên kết thêm tài khoản còn lại.
+trên máy. Người dùng cũng có thể bấm **Bỏ qua** để dùng như khách, rồi liên kết Google sau trong **Hồ sơ**.
 
 Nếu chưa có khoá, app hiện hộp thoại hướng dẫn kèm nút **Dùng thử** (hồ sơ mẫu) để vẫn trải nghiệm được.
 
 > Lưu ý khi phát hành: luồng loopback phù hợp cho máy tính và bản thử trên điện thoại. Bản phát hành
-> chính thức trên Android/iOS nên chuyển sang Google Sign-In / Facebook SDK gốc hoặc Firebase Auth
+> chính thức trên Android/iOS nên chuyển sang Google Sign-In gốc hoặc Firebase Auth
 > (redirect bằng deep link) và **không** nhúng client secret vào app.
 
 ## Kiểm thử
