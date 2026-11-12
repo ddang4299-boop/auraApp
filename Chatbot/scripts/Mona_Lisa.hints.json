@@ -1,0 +1,605 @@
+{
+ "version": 2,
+ "painting": "Mona_Lisa",
+ "hints": {
+  "Q1": [
+   "Mình thấy gì khiến bức tranh thật yên bình?",
+   "Chi tiết nào tạo cảm giác bí ẩn nhất?",
+   "Mình cảm nhận được sự cô đơn ở đâu?"
+  ],
+  "Q1.1_A": [
+   "Ánh sáng nào làm mình cảm thấy bình yên?",
+   "Mình thấy gì trong nụ cười mang lại sự thanh thản?",
+   "Chi tiết nào trong khung cảnh phía sau tạo cảm giác yên tĩnh?"
+  ],
+  "Q1.1_B": [
+   "Mình không hiểu gì ở nụ cười này?",
+   "Điều gì trong ánh mắt khiến mình bối rối?",
+   "Chi tiết nào trong tư thế làm mình khó nắm bắt?"
+  ],
+  "Q1.1_C": [
+   "Biểu cảm nào khiến mình cảm thấy buồn?",
+   "Mình thấy gì trong ánh mắt mang lại cảm giác cô đơn?",
+   "Không gian nào phía sau tạo nên nỗi buồn?"
+  ],
+  "Q1.1_D": [
+   "Mình cảm thấy gần gũi ở nụ cười nào?",
+   "Ánh mắt nào khiến mình thấy thân thiện?",
+   "Tư thế nào làm mình cảm thấy gần gũi?"
+  ],
+  "Q1.1_E": [
+   "Trang phục nào tạo cảm giác trang trọng?",
+   "Tư thế nào khiến mình cảm nhận được sự nghiêm túc?",
+   "Bố cục nào làm mình thấy trang trọng?"
+  ],
+  "Q1.1_F": [
+   "Mình thấy gì lạ trong nụ cười này?",
+   "Tỷ lệ nào của nhân vật khiến mình bất ngờ?",
+   "Cách phối màu nào làm mình cảm thấy khác lạ?"
+  ],
+  "Q1.1_G": [
+   "Mình muốn quan sát kỹ gương mặt hơn?",
+   "Đôi bàn tay có chi tiết gì thu hút mình?",
+   "Mình sẽ tập trung vào phong cảnh phía sau?"
+  ],
+  "Q1.1_H": [
+   "Mình muốn biết thêm gì về cảm nhận này?",
+   "Chi tiết nào khiến mình có cảm xúc này?",
+   "Mình có thể chia sẻ gì thêm về ấn tượng?"
+  ],
+  "Q2A.1": [
+   "Mình chú ý gì đầu tiên ở nụ cười?",
+   "Ánh mắt nào thu hút mình nhất?",
+   "Hướng nhìn của cô ấy khiến mình tò mò?"
+  ],
+  "Q2A.2_A": [
+   "Nụ cười này có vẻ gì đặc biệt?",
+   "Mình cảm nhận được gì từ độ cong của môi?",
+   "Có gì trong ánh sáng làm nụ cười mờ ảo?"
+  ],
+  "Q2A.3_A": [
+   "Chi tiết nào ở môi khiến mình suy nghĩ?",
+   "Mình thấy gì khi nhìn vào góc miệng?",
+   "Đôi mắt và môi có tương tác như thế nào?"
+  ],
+  "Q2A.4_A": [
+   "Nếu chỉ nhìn môi, mình vẫn thấy cảm xúc?",
+   "Môi một mình có thể truyền tải gì?",
+   "Mình có nhận ra gì khi bỏ mắt ra?"
+  ],
+  "Q2A.5_A": [
+   "Đôi mắt có làm mạnh hơn cảm giác ban đầu?",
+   "Mình cảm nhận gì khi mắt và môi cùng hiện?",
+   "Ánh mắt có thay đổi ý nghĩa của nụ cười?"
+  ],
+  "Q2A.6_A": [
+   "Hai phần mặt này có thể gây mâu thuẫn vì gì?",
+   "Mình nghĩ gì về sự khác nhau giữa mắt và môi?",
+   "Có yếu tố nào khiến cảm nhận thay đổi?"
+  ],
+  "Q2A.7_A": [
+   "Nụ cười này có thể biểu thị bao nhiêu cảm xúc?",
+   "Mình thấy gì trong cách môi uốn cong?",
+   "Có cách nào khác để giải mã nụ cười này?"
+  ],
+  "Q2A.8_A": [
+   "Mình muốn xem lại mắt và môi riêng biệt?",
+   "Có gì mới nếu quan sát lại chi tiết này?"
+  ],
+  "Q2A.2_B": [
+   "Ánh mắt này truyền cảm gì?",
+   "Mình cảm nhận được gì từ hướng nhìn?",
+   "Có gì trong ánh sáng mắt làm mình bối rối?"
+  ],
+  "Q2A.3_B": [
+   "Chi tiết nào trong mắt tạo ấn tượng?",
+   "Mình thấy gì khi so sánh mắt và nụ cười?",
+   "Hình dáng mắt có ảnh hưởng gì đến cảm xúc?"
+  ],
+  "Q2A.4_B": [
+   "Ánh mắt và nụ cười có cùng cảm xúc không?",
+   "Mình nghĩ mắt và môi đang nói gì?",
+   "Có sự đồng nhất giữa mắt và môi không?"
+  ],
+  "Q2A.5_B": [
+   "Mình cảm nhận được cảm xúc gì từ nụ cười này?",
+   "Cái ánh sáng quanh khuôn mặt có làm cảm xúc thay đổi không?",
+   "Chi tiết nào trong mắt khiến mình nghĩ tới cảm xúc nào?"
+  ],
+  "Q2A.6_B": [
+   "Sự khác biệt trong ánh sáng có gợi ý gì không?",
+   "Mình thấy gì ở đường viền môi so với mắt?",
+   "Chi tiết nào khiến mình cảm nhận đa cảm xúc?"
+  ],
+  "Q2A.2_C": [
+   "Mình nên nhìn vào đâu để đoán người cô ấy đang nhìn?",
+   "Ánh sáng phía sau có gợi ý người nào không?",
+   "Cái góc nhìn của cô ấy hướng về đâu?"
+  ],
+  "Q2A.3_C": [
+   "Nếu cô ấy nhìn mình, mình sẽ cảm thấy thế nào?",
+   "Cảm giác gần gũi hay xa cách khi mắt cô ấy gặp mình?",
+   "Mình sẽ trải nghiệm gì khi có ánh mắt giao tiếp?"
+  ],
+  "Q2A.4_C": [
+   "Mình muốn khám phá chi tiết gì trong đôi mắt của cô ấy?",
+   "Có gì đặc biệt ở ánh sáng mắt khiến mình muốn nhìn sâu hơn?",
+   "Mình có nên chú ý vào màu sắc mắt không?"
+  ],
+  "Q2A.2_D": [
+   "Mình nhận thấy đường nét mềm mại ở đâu trên khuôn mặt?",
+   "Sự chuyển tiếp màu sắc có làm nét mặt trở nên mượt mà không?",
+   "Chi tiết nào cho mình cảm giác mềm mại nhất?"
+  ],
+  "Q2A.3_D": [
+   "Ánh sáng và bóng tối ảnh hưởng thế nào tới biểu cảm?",
+   "Mình thấy sự chuyển đổi sáng tối làm khuôn mặt như thế nào?",
+   "Chi tiết ánh sáng nào làm biểu cảm khó xác định hơn?"
+  ],
+  "Q2B.1": [
+   "Mình chú ý gì ở vị trí hai bàn tay của cô ấy?",
+   "Cách cô ấy ngồi có tạo ra cảm giác gì?",
+   "Hướng vai và cơ thể truyền đạt gì cho mình?"
+  ],
+  "Q2B.2_A": [
+   "Mình cảm nhận thế nào về cách cô ấy đặt tay?",
+   "Tư thế tay có vẻ tự nhiên hay gượng gạo?",
+   "Chi tiết nào trong vị trí tay khiến mình suy nghĩ?"
+  ],
+  "Q2B.3_A": [
+   "Vị trí hai bàn tay có làm tư thế cô ấy khác biệt không?",
+   "Mình thấy tay tạo cảm giác gì: điềm tĩnh hay kín đáo?",
+   "Chi tiết nào trong vị trí tay làm mình chú ý?"
+  ],
+  "Q2B.4_A": [
+   "Nếu tay cô đổi vị trí, mình sẽ cảm nhận gì khác?",
+   "Thay đổi vị trí tay có làm cô trông lạnh lùng hơn?",
+   "Mình có thấy ấn tượng thay đổi khi tay di chuyển?"
+  ],
+  "Q2B.2_B": [
+   "Tư thế ngồi khiến cô trông có vẻ gì?",
+   "Mình cảm nhận được sự tự tin trong tư thế này?",
+   "Cô có vẻ trang trọng hay thư thái khi ngồi?"
+  ],
+  "Q2B.3_B": [
+   "Cô có vẻ đang tự tạo dáng cho bức tranh?",
+   "Mình thấy cô chủ động trong cách tạo dáng không?",
+   "Có dấu hiệu cô kiểm soát tư thế không?"
+  ],
+  "Q2B.4_B": [
+   "Điều gì trong tư thế tạo ra cảm giác ấy?",
+   "Mình nghĩ hướng nhìn hay cách đặt tay gây ra cảm giác này?",
+   "Bố cục tổng thể có ảnh hưởng tới cảm giác đó không?"
+  ],
+  "Q2B.2_CD": [
+   "Hướng cơ thể và đầu của cô có đồng điệu không?",
+   "Mình thấy sự hòa hợp giữa hướng đầu và thân mình?",
+   "Có cảm giác hơi lệch giữa hướng đầu và cơ thể không?"
+  ],
+  "Q2B.3_CD": [
+   "Sự hòa hợp này làm cô gần gũi hơn?",
+   "Mình cảm nhận được sự trang trọng từ sự khác biệt?",
+   "Cảm giác tự nhiên hay không bị ảnh hưởng?"
+  ],
+  "Q2C.1": [
+   "Chi tiết nào trong diện mạo cô thu hút mình nhất?",
+   "Mình chú ý nhất vào gì trong trang phục cô?",
+   "Điểm nào trong diện mạo gây ấn tượng mạnh?"
+  ],
+  "Q2C.2_A": [
+   "Mái tóc của cô trông tự nhiên hay có chủ ý?",
+   "Mình cảm nhận tóc cô gọn gàng hay thoải mái?",
+   "Tóc cô có vẻ đơn giản hay tinh tế?"
+  ],
+  "Q2C.3_A": [
+   "Mái tóc có làm mình cảm thấy cô gần gũi hơn?",
+   "Tóc cô có tạo cảm giác trang trọng không?",
+   "Mình thấy tóc ảnh hưởng đến ấn tượng chung?"
+  ],
+  "Q2C.2_BC": [
+   "Trang phục cô mang lại cảm giác gì?",
+   "Mình cảm nhận cô giản dị hay quý phái?",
+   "Cô có vẻ thanh lịch hay gần gũi qua trang phục?"
+  ],
+  "Q2C.3_BC": [
+   "Mình thấy chất liệu của áo có gì đặc biệt?",
+   "Màu sắc trang phục có ảnh hưởng tới cảm xúc không?",
+   "Chi tiết nào trong kiểu dáng thu hút mình nhất?"
+  ],
+  "Q2C.4_BC": [
+   "Trang phục này có gợi ý về địa vị xã hội không?",
+   "Mình có thể suy đoán lối sống từ cách mặc này?",
+   "Có gì trong trang phục phản ánh cá tính của cô ấy?"
+  ],
+  "Q2C.2_D": [
+   "Diện mạo cô ấy khiến mình cảm thấy gần gũi hơn?",
+   "Mình thấy cô ấy có vẻ xa cách hay thanh lịch?",
+   "Cảm giác tổng thể khi nhìn vào khuôn mặt là gì?"
+  ],
+  "Q2C.3_D": [
+   "Mình muốn nhìn kỹ hơn vào chi tiết nào?",
+   "Có phần nào của mái tóc mình nên chú ý?",
+   "Khuôn mặt có điểm nào đáng để khám phá?"
+  ],
+  "Q2D.1": [
+   "Mình bị thu hút nhất bởi dãy núi hay dòng sông?",
+   "Cây cầu trong tranh mang lại ấn tượng gì?",
+   "Con đường uốn lượn tạo cảm giác như thế nào?"
+  ],
+  "Q2D.2_A": [
+   "Những dãy núi khiến mình cảm thấy hùng vĩ?",
+   "Mình thấy núi mang lại cảm giác bình yên?",
+   "Có gì khiến mình nghĩ tới sự xa xôi, lạnh lẽo?"
+  ],
+  "Q2D.3_A": [
+   "Mình cảm nhận những ngọn núi này gần hay xa?",
+   "Có vẻ chúng rất xa trong không gian?",
+   "Có thể nói chúng khá gần với người xem?"
+  ],
+  "Q2D.2_BD": [
+   "Dòng sông uốn lượn tạo chiều sâu như thế nào?",
+   "Con đường dẫn mắt tới đâu trong tranh?",
+   "Mình nhận thấy gì đặc biệt ở cả hai yếu tố?"
+  ],
+  "Q2D.3_BD": [
+   "Những đường nét khiến không gian trông rộng lớn?",
+   "Mình thấy không gian sâu và xa hơn?",
+   "Có cảm giác mơ hồ trong cách vẽ không?"
+  ],
+  "Q2D.2_C": [
+   "Cây cầu gợi nhớ tới sự kết nối nào?",
+   "Mình liên tưởng cây cầu tới nơi có người sinh sống?",
+   "Có dấu vết hoạt động con người nào trên cầu?"
+  ],
+  "Q2D.3_C": [
+   "Cây cầu có làm phong cảnh gần gũi hơn không?",
+   "Mình có thấy cây cầu tạo chiều sâu không?",
+   "Cây cầu có thay đổi cảm giác không gian không?"
+  ],
+  "Q2D.2_E": [
+   "Mờ ảo này khiến mình cảm giác như mơ không?",
+   "Sự mờ ảo làm cảnh vật xa hơn hay gần hơn?",
+   "Mình thấy chi tiết nào bị mờ nhất?"
+  ],
+  "Q2D.3_E": [
+   "Mờ ảo có liên quan tới cách họa sĩ tạo chiều sâu không?",
+   "Mình có thể thấy sự sâu thẳm qua lớp mờ không?",
+   "Cách mờ ảo ảnh hưởng tới cảm nhận không gian không?"
+  ],
+  "Q2D.2_F": [
+   "Nhân vật và cảnh vật nào rõ nét hơn?",
+   "Mình thấy ánh sáng nào làm nhân vật nổi bật?",
+   "Kích thước nào tạo sự khác biệt rõ rệt?"
+  ],
+  "Q2E.1": [
+   "Bố cục có cân đối hay lệch không?",
+   "Mình cảm nhận màu sắc nào chiếm ưu thế?",
+   "Có điểm nào tập trung ánh sáng mạnh không?"
+  ],
+  "Q2E.2": [
+   "Nhìn xa hơn mình thấy mối liên hệ nào mới?",
+   "Bố cục tổng thể có thay đổi khi nhìn xa không?",
+   "Màu sắc có hòa quyện hơn khi xa không?"
+  ],
+  "Q2E.3": [
+   "Ánh sáng tập trung vào khuôn mặt hay nền?",
+   "Mình thấy vùng sáng nào nổi bật nhất?",
+   "Có vùng tối nào làm cân bằng ánh sáng không?"
+  ],
+  "Q2E.3_A": [
+   "Ánh sáng có làm khuôn mặt mình chú ý hơn không?",
+   "Nhân vật có nổi bật hơn nhờ ánh sáng không?",
+   "Mình cảm nhận ánh sáng làm nhân vật sáng hơn?"
+  ],
+  "Q2E.3_B": [
+   "Ánh sáng có hướng mình nhìn vào phong cảnh không?",
+   "Mình thấy cảnh vật sáng hơn vì ánh sáng?",
+   "Ánh sáng có làm phong cảnh thu hút hơn?"
+  ],
+  "Q2E.3_C": [
+   "Sự chuyển tiếp sáng-tối có tự nhiên hơn không?",
+   "Mình cảm nhận độ mượt của ánh sáng không?",
+   "Chuyển đổi sáng-tối có làm tranh mềm mại?"
+  ],
+  "Q2E.3_D": [
+   "Chi tiết nào trong khuôn mặt nhận thấy ánh sáng thay đổi?",
+   "Ánh sáng ở phía nào làm nền trở nên sâu hơn?",
+   "Mình có thể thấy bóng tối quanh viền không?"
+  ],
+  "Q3A.1": [
+   "Ánh mắt cô ấy truyền cảm gì?",
+   "Nụ cười nhẹ có dấu hiệu gì đặc biệt?",
+   "Tư thế tay và vai gợi lên cảm xúc nào?"
+  ],
+  "Q3A.2_A": [
+   "Mình có thể nhận ra niềm vui qua nét mặt không?",
+   "Biểu hiện hạnh phúc có thể ẩn sâu trong ánh mắt?",
+   "Cảm xúc hạnh phúc có thể không hiện ra rõ ràng?"
+  ],
+  "Q3A.3_A": [
+   "Nụ cười có dấu hiệu gì khiến mình nghĩ cô hài lòng?",
+   "Ánh mắt có ánh sáng nào gợi cảm giác hài lòng?",
+   "Tư thế ngồi có gì cho thấy sự thoải mái?"
+  ],
+  "Q3A.2_B": [
+   "Ánh sáng quanh khuôn mặt có tạo cảm giác bình thản không?",
+   "Mình cảm nhận được sự yên tĩnh từ nền không?",
+   "Cách bố cục làm nổi bật sự bình thản như thế nào?"
+  ],
+  "Q3A.3_B": [
+   "Nụ cười và bình thản có thể đồng thời tồn tại?",
+   "Ánh mắt có thể biểu hiện bình thản mà không hạnh phúc?",
+   "Mình có thấy sự khác biệt giữa hai cảm xúc này không?"
+  ],
+  "Q3A.2_C": [
+   "Ánh mắt có gợi ý cô đang suy nghĩ về ai?",
+   "Nụ cười có liên quan tới một kỷ niệm nào không?",
+   "Tư thế có gợi ý cô đang nhớ gì không?"
+  ],
+  "Q3A.3_C": [
+   "Chi tiết nào trong ánh mắt khiến mình tưởng tượng ra suy nghĩ?",
+   "Nụ cười có dấu hiệu gì gợi ý nội dung suy nghĩ?",
+   "Tư thế chung của cô gợi lên hình ảnh gì?"
+  ],
+  "Q3A.2_D": [
+   "Có dấu hiệu nào trong ánh sáng cho thấy cô giấu gì?",
+   "Mình có thấy gì bất thường trong nụ cười không?",
+   "Tư thế có thể ẩn chứa một bí mật nào?"
+  ],
+  "Q3A.3_D": [
+   "Ánh mắt có gì khiến mình nghĩ cô đang che giấu?",
+   "Nụ cười có dấu hiệu gì cho thấy điều gì đó ẩn?",
+   "Tổng thể biểu cảm có gì gợi ý sự bí ẩn?"
+  ],
+  "Q3A.2_E": [
+   "Mình có thể thấy sự buồn bã nào trong nụ cười không?",
+   "Có dấu hiệu của sự suy tư ở ánh mắt không?",
+   "Biểu cảm có vẻ thân thiện hay xa cách hơn?"
+  ],
+  "Q3A.3_E": [
+   "Nhiều cảm xúc đồng thời làm khuôn mặt khó đọc hơn?",
+   "Sự pha trộn cảm xúc khiến mình bối rối không?",
+   "Cảm giác này có làm biểu cảm trở nên mơ hồ không?"
+  ],
+  "Q3A.2_F": [
+   "Mình muốn tập trung vào nụ cười hay ánh mắt?",
+   "Có chi tiết nào khiến mình muốn khám phá sâu hơn?",
+   "Mình có nên chấp nhận không xác định ngay bây giờ?"
+  ],
+  "Q3A.2F_switch": [
+   "Mình muốn suy nghĩ về mối quan hệ giữa mình và cô ấy?",
+   "Có nên chú ý tới phong cảnh phía sau không?",
+   "Mình muốn khám phá cả hai khía cạnh cùng lúc?"
+  ],
+  "Q3A.4": [
+   "Cảm xúc này chỉ là khoảnh khắc ngắn ngủi?",
+   "Nó có thể là trạng thái kéo dài trong bức tranh?",
+   "Họa sĩ có muốn nhấn mạnh cảm xúc này không?"
+  ],
+  "Q3A.6": [
+   "Một người khác có thể dựa vào nụ cười để giải thích?",
+   "Ánh mắt có thể là chìa khóa cho cách diễn giải khác?",
+   "Tư thế của cô ấy có ảnh hưởng tới ý nghĩa không?"
+  ],
+  "Q3A.7": [
+   "Mình muốn giữ cách hiểu ban đầu về cảm xúc?",
+   "Có nên thay đổi quan điểm sau khi suy nghĩ lại?",
+   "Mình có thể đồng thời chấp nhận nhiều cách hiểu?"
+  ],
+  "Q3B.1": [
+   "Cô ấy có vẻ đang nhìn thẳng vào mình không?",
+   "Mình cảm thấy như đang quan sát một khoảnh khắc riêng tư?",
+   "Có khoảng cách nào giữa mình và cô ấy không?"
+  ],
+  "Q3B.2_A": [
+   "Ánh nhìn khiến mình cảm thấy được chú ý?",
+   "Mình có cảm giác được chào đón bởi cô ấy?",
+   "Có cảm giác như mình đang bị quan sát không?"
+  ],
+  "Q3B.3_A": [
+   "Hướng nhìn của cô ấy tạo ra cảm giác này?",
+   "Nụ cười có đóng vai trò trong cảm giác ấy?",
+   "Sự kết hợp giữa ánh mắt và nụ cười là gì?"
+  ],
+  "Q3B.2_B": [
+   "Mình thấy cô ấy đang suy nghĩ gì?",
+   "Mình có cảm nhận được ai đang đứng ngoài khung?",
+   "Mình nghĩ cô ấy đang tập trung vào điều gì trong tranh?"
+  ],
+  "Q3B.3_B": [
+   "Tại sao mình cảm thấy cô ấy tách biệt?",
+   "Ánh mắt cô ấy có tạo khoảng cách không?",
+   "Tư thế của cô ấy làm mình thấy xa vời?"
+  ],
+  "Q3B.2_C": [
+   "Mình tưởng tượng họ đang trò chuyện như thế nào?",
+   "Khoảnh khắc yên tĩnh này diễn ra ở đâu?",
+   "Mình thấy một buổi gặp mặt trang trọng ở đâu?"
+  ],
+  "Q3B.3_C": [
+   "Chi tiết nào trong ánh sáng khiến mình tưởng tượng?",
+   "Mình chú ý đến gì ở nền tranh?",
+   "Màu sắc nào gợi lên tình huống đó?"
+  ],
+  "Q3B.2_D": [
+   "Khoảng cách này đến từ bố cục hay gì?",
+   "Mình cảm nhận khoảng cách đến từ biểu cảm?",
+   "Cái gì khiến mình thấy nhân vật ở thế giới khác?"
+  ],
+  "Q3B.2_E": [
+   "Nếu cô ấy nói, mình sẽ nghe gì?",
+   "Mình nghĩ cô ấy sẽ hỏi gì người xem?",
+   "Lời chào nào phù hợp với cô ấy?"
+  ],
+  "Q3B.5": [
+   "Nếu cô ấy quay mặt, mối quan hệ sẽ thay đổi?",
+   "Hướng nhìn mới sẽ ảnh hưởng tới cảm xúc mình?",
+   "Mình sẽ cảm nhận gì nếu cô ấy nhìn thẳng?"
+  ],
+  "Q3C.1": [
+   "Mình thấy mối liên hệ giữa cô và phong cảnh?",
+   "Cảnh nền có phản ánh tâm trạng của cô không?",
+   "Hai phần này tạo ra sự tương phản như thế nào?"
+  ],
+  "Q3C.2_A": [
+   "Nếu thay đổi phong cảnh, cảm xúc cô sẽ thay đổi?",
+   "Mình sẽ cảm nhận bầu không khí mới ra sao?",
+   "Câu chuyện mình tưởng tượng sẽ bị ảnh hưởng?"
+  ],
+  "Q3C.2_B": [
+   "Sự tương phản nằm ở giữa người và thiên nhiên?",
+   "Mình thấy khoảng cách giữa nhân vật và không gian?",
+   "Sự rõ nét và mờ ảo tạo ra cảm giác gì?"
+  ],
+  "Q3C.2_C": [
+   "Cảnh nền này truyền cảm giác gì cho mình?",
+   "Màu sắc trong phong cảnh có làm mình cảm thấy bình yên không?",
+   "Ánh sáng phía sau có tạo nên sự bí ẩn nào không?"
+  ],
+  "Q3C.3": [
+   "Chi tiết nào trong tranh gợi nhớ cảm xúc ấy?",
+   "Cái nhìn của người phụ nữ có liên quan tới cảm xúc không?",
+   "Màu sắc của áo choàng có làm mình liên tưởng gì?"
+  ],
+  "Q3C.6": [
+   "Mình có thấy cô ấy gần gũi hơn khi nhìn phong cảnh?",
+   "Cảnh nền có làm cô ấy trở nên bí ẩn hơn không?",
+   "Mình vẫn cảm nhận cô ấy như trước khi thấy phong cảnh?"
+  ],
+  "Q3D.1": [
+   "Mình muốn biết về danh tính người mẫu?",
+   "Cách vẽ sfumato trong bức tranh có gì đặc biệt?",
+   "Trang phục của cô ấy phản ánh thời kỳ nào?"
+  ],
+  "Q3D.2_A": [
+   "Biết là Lisa Gherardini, mình cảm nhận gì khác?",
+   "Câu chuyện đời cô ấy có ảnh hưởng tới cảm nhận không?",
+   "Mình có thắc mắc gì về nhân vật trong tranh?"
+  ],
+  "Q3D.2_B": [
+   "Thời gian vẽ dài có làm chi tiết trở nên tỉ mỉ hơn?",
+   "Quá trình sáng tác kéo dài ảnh hưởng tới biểu cảm không?",
+   "Mình có thắc mắc gì về cách thể hiện người phụ nữ?"
+  ],
+  "Q3D.2_C": [
+   "Trang phục cho thấy cô thuộc tầng lớp nào?",
+   "Chi tiết áo choàng gợi nhớ đến thương nhân không?",
+   "Mình muốn khám phá thêm về trang phục trong tranh?"
+  ],
+  "Q3D.2_D": [
+   "Mình muốn xem lại ánh sáng trên khuôn mặt?",
+   "Chi tiết phong cảnh có hiệu ứng sfumato nào không?",
+   "Mình muốn khám phá kỹ thuật nào khác trong tranh?"
+  ],
+  "Q3D.2_E": [
+   "Mình nghĩ yếu tố nào làm tranh này nổi tiếng nhất?",
+   "Câu chuyện lịch sử có ảnh hưởng lớn tới giá trị không?",
+   "Sự kết hợp kỹ thuật và câu chuyện làm gì cho danh tiếng?"
+  ],
+  "Q3D.3_E": [
+   "Mình có tin rằng danh tiếng quyết định giá trị nghệ thuật?",
+   "Một bức tranh có thể giá trị mà không nổi tiếng không?",
+   "Tiêu chí nào khiến mình đánh giá giá trị nghệ thuật?"
+  ],
+  "Q3D.F": [
+   "Mình muốn biết lịch sử sáng tác của tranh?",
+   "Mình thắc mắc về phong cách Sfumato ở đây?",
+   "Mình curios về trang phục của người mẫu?"
+  ],
+  "Q3E.1": [
+   "Mình có nên nhìn vào ánh sáng không?",
+   "Mình muốn khám phá bố cục của bức tranh?",
+   "Mình có nên chú ý tới biểu cảm khuôn mặt?"
+  ],
+  "Q3E.2_A": [
+   "Mình muốn tập trung vào cảm xúc của người phụ nữ?",
+   "Mình có nên xem mối quan hệ giữa người và người xem?",
+   "Mình thắc mắc về chi tiết phong cảnh phía sau?"
+  ],
+  "Q3E.3_A": [
+   "Mình cảm nhận thay đổi khi nhìn vào ánh sáng?",
+   "Mình thấy bố cục mới có gì khác?",
+   "Mình nhận ra chi tiết nào làm thay đổi cảm xúc?"
+  ],
+  "Q3E.2_C": [
+   "Mình dựa vào chi tiết nào để nhận định?",
+   "Mình có đang liên tưởng cá nhân không?",
+   "Mình dùng kiến thức lịch sử để suy nghĩ?"
+  ],
+  "Q3E.3_C": [
+   "Có chi tiết nào khiến mình thay đổi nhận định?",
+   "Mình có thấy gì mới trong ánh sáng?",
+   "Mình muốn khám phá phần nào của nền tranh?"
+  ],
+  "Q4.1": [
+   "Mình có cảm nhận mới sau khi quan sát?",
+   "Mình thấy ấn tượng đầu tiên thay đổi không?",
+   "Mình nhận ra chi tiết nào khiến suy nghĩ thay đổi?"
+  ],
+  "Q4.2_A": [
+   "Chi tiết nào khiến mình thay đổi cách nhìn?",
+   "Mối liên hệ nào giữa các chi tiết mới?",
+   "Câu hỏi nào khiến mình suy nghĩ lại?"
+  ],
+  "Q4.3_A": [
+   "Mình sẽ mô tả tranh bằng một câu như thế nào?",
+   "Nếu tóm tắt, mình sẽ nói gì về bức tranh?",
+   "Mình muốn diễn đạt cảm nhận hiện tại bằng một câu?"
+  ],
+  "Q4.2_B": [
+   "Mình nhận ra chi tiết nào mới?",
+   "Mình có thêm cách giải thích nào?",
+   "Mình hiểu rõ hơn phần nào của tranh?"
+  ],
+  "Q4.3_B": [
+   "Mình thấy gì đặc biệt ở nụ cười?",
+   "Đôi tay của cô ấy đang làm gì?",
+   "Ánh sáng phía sau tạo cảm giác gì?"
+  ],
+  "Q4.4_B": [
+   "Mình muốn khám phá thêm ánh sáng không?",
+   "Tiếp tục xem chi tiết trang phục nhé?",
+   "Xem kỹ hơn bố cục có thú vị không?"
+  ],
+  "Q4.2_C": [
+   "Mình nhận ra chi tiết nào mới?",
+   "Có yếu tố nào thay đổi cảm nhận không?",
+   "Mình thấy gì khác trong nền không?"
+  ],
+  "Q4.3_C": [
+   "Giải thích rõ ràng có cần thiết không?",
+   "Mình có cần lý do cho cảm xúc không?",
+   "Cảm nhận cá nhân có giá trị mà không giải thích?"
+  ],
+  "Q4.4_C": [
+   "Mình muốn nhìn từ góc trên không?",
+   "Thử nhìn từ góc thấp sẽ ra sao?",
+   "Xem từ bên trái có khác gì không?"
+  ],
+  "Q4.2_D": [
+   "Mình cảm thấy mâu thuẫn giữa gì?",
+   "Hai cảm nhận có thể hòa hợp không?",
+   "Mình có thể nối liền chúng lại?"
+  ],
+  "Q4.3_D": [
+   "Mình muốn khám phá ý nghĩa của ánh sáng?",
+   "Tiếp tục suy nghĩ về biểu cảm khuôn mặt?",
+   "Xem xét chi tiết trang phục sâu hơn?"
+  ],
+  "Q4.2_E": [
+   "Mình chưa quan sát đủ chi tiết nào?",
+   "Có gì khiến mình ngần ngại kết luận?",
+   "Mình cảm thấy còn gì chưa rõ?"
+  ],
+  "Q4.3_E": [
+   "Mình muốn quay lại nhìn gương mặt?",
+   "Xem lại đôi tay và tư thế nhé?",
+   "Kiểm tra lại bố cục có cần không?"
+  ],
+  "Q4.5": [
+   "Mình muốn họ chú ý vào nụ cười?",
+   "Đầu tiên nên nhìn vào ánh sáng?",
+   "Cái gì làm họ ngạc nhiên nhất?"
+  ]
+ }
+}

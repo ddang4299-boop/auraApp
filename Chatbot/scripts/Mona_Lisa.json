@@ -1,0 +1,4091 @@
+{
+  "meta": {
+    "app_name": "AURA",
+    "target_artwork": "Mona Lisa",
+    "artist": "Leonardo da Vinci",
+    "language": "vi",
+    "version": "1.0",
+    "purpose": "Kịch bản hội thoại để chat AI dẫn dắt người dùng khám phá tác phẩm: cung cấp thông tin đúng lúc và đặt câu hỏi gợi mở, không kết luận thay người dùng.",
+    "entry_point": {
+      "type": "question",
+      "id": "Q1"
+    },
+    "conventions": {
+      "next": "Mọi điều hướng đều có dạng {type, id}. type: question | branch | stage | end | dynamic (dynamic dùng key 'rule', xem navigation_schema.dynamic_rules).",
+      "default_next": "Điểm đến mặc định của câu hỏi nếu option được chọn không có 'next' riêng.",
+      "conditional_next": "Điều kiện bổ sung (ví dụ người dùng nhắc đến lịch sử) ưu tiên hơn default_next.",
+      "alternative_next": "Đường rẽ AI có thể đề nghị nhưng không ép (người dùng quyết định).",
+      "added_by_converter": "true = câu hỏi/nội dung kịch bản gốc còn thiếu, đã được bổ sung khi chuyển sang JSON. Cần team rà soát lại.",
+      "input_type": "choice_with_free_input: hiển thị options + cho nhập tự do. free_text: chỉ nhập tự do.",
+      "context": "Danh sách mã context (C1-C8) cần hiển thị TRƯỚC câu hỏi kế tiếp."
+    }
+  },
+  "general_rules": {
+    "options_per_question": "3-5 gợi ý kèm lựa chọn nhập tự do (free input)",
+    "options_exceptions": {
+      "Q1": "8 lựa chọn (A-G cảm xúc + H free input) theo kịch bản gốc",
+      "Q2D.1": "6 lựa chọn theo kịch bản gốc",
+      "Q4.3_E": "6 lựa chọn theo kịch bản gốc"
+    },
+    "repeat_avoidance": true,
+    "custom_input_handling": "Nếu câu trả lời ngoài options, tạo nhánh xử lý dựa trên nội dung thực tế người dùng nhập",
+    "uncertain_answer_handling": "Nếu người dùng không chắc chắn, không ép chọn đáp án",
+    "force_choice": false,
+    "conclude_for_user": false,
+    "strict_stage_completion": false,
+    "user_exit_anytime": true,
+    "on_user_exit": {
+      "type": "end",
+      "id": "AUTO_ASSESSMENT"
+    },
+    "unscripted_detail_priority": {
+      "enabled": true,
+      "note": "Nếu người dùng tự đưa ra chi tiết chưa có trong question bank, ưu tiên khám phá chi tiết đó. (Phát triển sau)"
+    }
+  },
+  "ai_behavior": {
+    "response_format": "Mỗi lượt: (1) phản hồi ngắn ghi nhận câu trả lời của người dùng, (2) thông tin context nếu có trigger, (3) MỘT câu hỏi kèm 3-5 gợi ý và cho phép nhập tự do.",
+    "tone": "Gợi mở, trung lập, tò mò, tôn trọng cảm nhận cá nhân. Không đánh giá đúng/sai cảm nhận của người dùng.",
+    "context_policy": [
+      "Chỉ đưa context khi câu hỏi của người dùng kích hoạt chủ đề tương ứng. Không tự động hiển thị toàn bộ.",
+      "Sau mỗi context: đặt một câu hỏi kết nối với quan sát trước đó.",
+      "Không tiếp tục giảng giải nếu người dùng không yêu cầu.",
+      "Chỉ cung cấp thông tin có cơ sở đáng tin cậy; nếu không đủ thông tin, nói rõ giới hạn thay vì suy đoán."
+    ],
+    "do_not": [
+      "Không đưa ra kết luận thay người dùng.",
+      "Không lặp lại câu hỏi người dùng đã trả lời.",
+      "Không ép người dùng chọn đáp án khi họ chưa chắc.",
+      "Không suy luận chắc chắn về tính cách người mẫu từ trang phục (C7)."
+    ],
+    "free_input_keyword_routing": {
+      "BRANCH_2A": [
+        "gương mặt",
+        "khuôn mặt",
+        "nụ cười",
+        "mỉm cười",
+        "ánh mắt",
+        "đôi mắt",
+        "hướng nhìn"
+      ],
+      "BRANCH_2B": [
+        "tư thế",
+        "đôi tay",
+        "bàn tay",
+        "dáng ngồi",
+        "vai",
+        "cơ thể"
+      ],
+      "BRANCH_2C": [
+        "trang phục",
+        "váy",
+        "áo",
+        "mái tóc",
+        "tóc",
+        "khăn",
+        "voan",
+        "lớp vải"
+      ],
+      "BRANCH_2D": [
+        "phong cảnh",
+        "núi",
+        "sông",
+        "cầu",
+        "con đường",
+        "khung cảnh phía sau",
+        "nền"
+      ],
+      "BRANCH_2E": [
+        "bố cục",
+        "màu sắc",
+        "ánh sáng",
+        "sáng tối",
+        "tông màu"
+      ],
+      "BRANCH_3D": [
+        "người mẫu là ai",
+        "danh tính",
+        "họa sĩ",
+        "Leonardo",
+        "kỹ thuật",
+        "lịch sử",
+        "vì sao nổi tiếng"
+      ]
+    },
+    "state_tracking": {
+      "answers": "Lưu mọi câu trả lời theo question id để tránh lặp câu hỏi.",
+      "explored_branches": "Danh sách nhánh Stage 2 đã khám phá đầy đủ.",
+      "selected_details": "Các chi tiết người dùng đã quan tâm (nụ cười, ánh mắt, bàn tay, ...).",
+      "interpretations": "Các cách diễn giải người dùng đã đưa ra (Stage 3).",
+      "pending_next": "Nhánh Stage 3 đang chờ khi người dùng ở màn Q2.F.",
+      "initial_impression": "Câu trả lời Q1, dùng để so sánh ở Stage 4.",
+      "contexts_shown": "Các mã context đã hiển thị, không hiển thị lại."
+    }
+  },
+  "navigation_schema": {
+    "dynamic_rules": {
+      "return_current_branch": "Quay lại nhánh Stage 2/3 mà người dùng đang đi, tiếp tục ở câu chưa trả lời.",
+      "open_unexplored_branch_list": "Hiển thị danh sách nhánh 2A-2E, loại trừ nhánh đã khám phá đầy đủ (state.explored_branches).",
+      "cross_branch_questions": "Chọn nhóm câu hỏi phụ phù hợp trong stages.stage_2.cross_branch_questions dựa trên state.explored_branches.",
+      "pending_stage3_branch": "Chuyển tới nhánh Stage 3 đã được lưu ở state.pending_next khi người dùng rời nhánh Stage 2.",
+      "q1_1_by_emotion": "Với Q1 = H (free input): xác định cảm xúc chính trong câu trả lời rồi hỏi Q1.1 tương ứng (A-F).",
+      "branch_by_detail_in_free_input": "Với Q1 = H (free input): nếu có chi tiết cụ thể, chuyển sang nhánh Stage 2 tương ứng (xem ai_behavior.free_input_keyword_routing).",
+      "revisit_branch_of_selected_detail": "Quay lại nhánh Stage 2 tương ứng chi tiết người dùng vừa chọn (Gương mặt→2A, Đôi bàn tay→2B, Trang phục→2C, Phong cảnh→2D, Bố cục→2E). Sau khi xong nhánh, quay về Stage 4."
+    },
+    "auto_assessment_ref": "AUTO_ASSESSMENT"
+  },
+  "context_database": {
+    "items": {
+      "C1": {
+        "topic": "Danh tính người mẫu",
+        "content": "Người phụ nữ thường được xác định là Lisa Gherardini, vợ của thương nhân Francesco del Giocondo tại Florence.",
+        "trigger_condition": "Hỏi về danh tính"
+      },
+      "C2": {
+        "topic": "Lịch sử sáng tác",
+        "content": "Leonardo da Vinci bắt đầu thực hiện bức tranh khoảng năm 1503 và tiếp tục hoàn thiện trong nhiều năm.",
+        "trigger_condition": "Hỏi về thời gian hoặc hoàn cảnh sáng tác (kết hợp C3)"
+      },
+      "C3": {
+        "topic": "Thời kỳ nghệ thuật",
+        "content": "Tác phẩm thuộc thời kỳ High Renaissance, gắn với bối cảnh nghệ thuật Ý đầu thế kỷ 16.",
+        "trigger_condition": "Hỏi về thời gian hoặc hoàn cảnh sáng tác (kết hợp C2)"
+      },
+      "C4": {
+        "topic": "Sfumato",
+        "content": "Kỹ thuật tạo chuyển tiếp mềm giữa các vùng sáng, tối và đường nét, tránh ranh giới quá sắc nét.",
+        "trigger_condition": "Hỏi về hiệu ứng mờ ảo, chuyển tiếp sáng tối"
+      },
+      "C5": {
+        "topic": "Atmospheric perspective",
+        "content": "Cách thể hiện chiều sâu bằng việc khiến những vật thể ở xa trông mờ hơn, ít tương phản hơn.",
+        "trigger_condition": "Hỏi về chiều sâu phong cảnh"
+      },
+      "C6": {
+        "topic": "Bố cục",
+        "content": "Nhân vật được thể hiện theo dạng chân dung bán thân, đặt ở vị trí trung tâm, với phong cảnh phía sau.",
+        "trigger_condition": "Hỏi về vị trí nhân vật và cách sắp xếp"
+      },
+      "C7": {
+        "topic": "Trang phục",
+        "content": "Trang phục, kiểu tóc và diện mạo có thể được đặt trong bối cảnh xã hội Florence đầu thế kỷ 16. Không suy luận chắc chắn về tính cách từ trang phục.",
+        "trigger_condition": "Hỏi về quần áo, địa vị xã hội"
+      },
+      "C8": {
+        "topic": "Danh tiếng",
+        "content": "Bức tranh được lưu giữ tại Louvre và có lịch sử tiếp nhận rộng lớn. Vụ đánh cắp năm 1911 cũng góp phần khiến tác phẩm được chú ý rộng rãi.",
+        "trigger_condition": "Hỏi vì sao bức tranh nổi tiếng"
+      }
+    },
+    "rules": [
+      {
+        "if_user_asks_about": "danh tính",
+        "show": [
+          "C1"
+        ]
+      },
+      {
+        "if_user_asks_about": "thời gian hoặc hoàn cảnh sáng tác",
+        "show": [
+          "C2",
+          "C3"
+        ]
+      },
+      {
+        "if_user_asks_about": "hiệu ứng mờ ảo, chuyển tiếp sáng tối",
+        "show": [
+          "C4"
+        ]
+      },
+      {
+        "if_user_asks_about": "chiều sâu phong cảnh",
+        "show": [
+          "C5"
+        ]
+      },
+      {
+        "if_user_asks_about": "vị trí nhân vật và cách sắp xếp",
+        "show": [
+          "C6"
+        ]
+      },
+      {
+        "if_user_asks_about": "quần áo, địa vị xã hội",
+        "show": [
+          "C7"
+        ]
+      },
+      {
+        "if_user_asks_about": "vì sao bức tranh nổi tiếng",
+        "show": [
+          "C8"
+        ]
+      }
+    ]
+  },
+  "stages": {
+    "STAGE_1": {
+      "id": "STAGE_1",
+      "name": "FIRST IMPRESSION",
+      "goal": "Ấn tượng đầu, 1 chi tiết liên quan đến ấn tượng đầu",
+      "questions": {
+        "Q1": {
+          "id": "Q1",
+          "text": "Ấn tượng đầu tiên của bạn về bức tranh là gì?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Bình yên, nhẹ nhàng",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Bí ẩn, khó nắm bắt",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_B"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Buồn, cô đơn",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_C"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Thân thiện, gần gũi",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Trang trọng, nghiêm túc",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_E"
+              }
+            },
+            {
+              "id": "F",
+              "label": "Kỳ lạ, khó giải thích",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_F"
+              }
+            },
+            {
+              "id": "G",
+              "label": "Không có cảm xúc đặc biệt",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_G"
+              }
+            },
+            {
+              "id": "H",
+              "label": "Cảm nhận khác (free input)",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_H"
+              }
+            }
+          ],
+          "max_options_exception": true
+        },
+        "Q1.1_A": {
+          "id": "Q1.1_A",
+          "text": "Điều gì trong bức tranh khiến bạn cảm thấy bình yên?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Gương mặt và nụ cười",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Ánh mắt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Tư thế và đôi bàn tay",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Khung cảnh phía sau",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Màu sắc và ánh sáng",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              },
+              "entry_hint": "color_light"
+            }
+          ],
+          "condition": "Q1 == A"
+        },
+        "Q1.1_B": {
+          "id": "Q1.1_B",
+          "text": "Điều gì khiến bạn cảm thấy khó nắm bắt nhất?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Nụ cười",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Ánh mắt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Sự kết hợp giữa gương mặt và tư thế",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Khung cảnh phía sau",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Không thể xác định một chi tiết cụ thể",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              }
+            }
+          ],
+          "condition": "Q1 == B"
+        },
+        "Q1.1_C": {
+          "id": "Q1.1_C",
+          "text": "Cảm giác buồn và cô đơn ấy đến từ đâu?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Biểu cảm khuôn mặt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Ánh mắt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Tư thế ngồi",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Không gian phía sau",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Tổng thể bức tranh",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              }
+            }
+          ],
+          "condition": "Q1 == C"
+        },
+        "Q1.1_D": {
+          "id": "Q1.1_D",
+          "text": "Bạn cảm thấy gần gũi với người phụ nữ ở điểm nào?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Nụ cười",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Ánh mắt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Tư thế tự nhiên",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Diện mạo và trang phục",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2C"
+              }
+            }
+          ],
+          "condition": "Q1 == D"
+        },
+        "Q1.1_E": {
+          "id": "Q1.1_E",
+          "text": "Điều gì tạo nên cảm giác trang trọng đó?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Trang phục",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2C"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Tư thế",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Biểu cảm",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Bố cục chân dung",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              }
+            }
+          ],
+          "condition": "Q1 == E"
+        },
+        "Q1.1_F": {
+          "id": "Q1.1_F",
+          "text": "Chi tiết nào khiến bạn cảm thấy bức tranh khác lạ?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Nụ cười",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Tỷ lệ và tư thế nhân vật",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Khung cảnh",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2D"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Cách phối màu và ánh sáng",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              },
+              "entry_hint": "color_light"
+            }
+          ],
+          "condition": "Q1 == F"
+        },
+        "Q1.1_G": {
+          "id": "Q1.1_G",
+          "text": "Nếu phải chọn một phần để quan sát kỹ hơn, bạn sẽ chọn gì?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Gương mặt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Đôi bàn tay",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Trang phục",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2C"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Phong cảnh",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Bố cục tổng thể",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              }
+            }
+          ],
+          "condition": "Q1 == G"
+        },
+        "Q1.1_H": {
+          "id": "Q1.1_H",
+          "text": "Bạn có thể chia sẻ thêm điều gì khiến bạn có cảm nhận đó không?",
+          "input_type": "free_text",
+          "added_by_converter": true,
+          "condition": "Q1 == H (free input)",
+          "routing_rules": [
+            {
+              "condition": "Câu trả lời có chi tiết cụ thể",
+              "next": {
+                "type": "dynamic",
+                "rule": "branch_by_detail_in_free_input"
+              }
+            },
+            {
+              "condition": "Câu trả lời chỉ có cảm xúc",
+              "next": {
+                "type": "dynamic",
+                "rule": "q1_1_by_emotion"
+              }
+            },
+            {
+              "condition": "Chưa xác định được",
+              "next": {
+                "type": "question",
+                "id": "Q1.1_G"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "STAGE_2": {
+      "id": "STAGE_2",
+      "name": "VISUAL DISCOVERY",
+      "goal": "Phân tích, ghép nối ý nghĩa các chi tiết với nhau",
+      "exit_hook": {
+        "question": "Q2.F",
+        "applies_to": "Mọi lần chuyển từ nhánh Stage 2 sang nhánh Stage 3"
+      },
+      "branches": {
+        "BRANCH_2A": {
+          "id": "BRANCH_2A",
+          "title": "Biểu cảm gương mặt",
+          "entry_question": "Q2A.1",
+          "questions": {
+            "Q2A.1": {
+              "id": "Q2A.1",
+              "text": "Khi nhìn vào gương mặt, bạn chú ý đến điều gì đầu tiên?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nụ cười",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Đôi mắt",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.2_B"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Hướng nhìn",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.2_C"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Sự kết hợp giữa các đường nét trên gương mặt",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.2_D"
+                  }
+                }
+              ]
+            },
+            "Q2A.2_A": {
+              "id": "Q2A.2_A",
+              "text": "Bạn cảm nhận nụ cười ấy như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Vui vẻ, hạnh phúc"
+                },
+                {
+                  "id": "B",
+                  "label": "Kín đáo, nhẹ nhàng"
+                },
+                {
+                  "id": "C",
+                  "label": "Có phần gượng gạo"
+                },
+                {
+                  "id": "D",
+                  "label": "Khó xác định là đang cười hay không"
+                },
+                {
+                  "id": "E",
+                  "label": "Có vẻ như đang che giấu điều gì đó"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.3_A"
+              }
+            },
+            "Q2A.3_A": {
+              "id": "Q2A.3_A",
+              "text": "Bạn chú ý đến đặc điểm nào khiến mình có cảm nhận đó? Đặc điểm đó khiến bạn cảm thấy thế nào về cô ấy?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Khóe miệng"
+                },
+                {
+                  "id": "B",
+                  "label": "Độ cong của nụ cười"
+                },
+                {
+                  "id": "C",
+                  "label": "Sự kết hợp giữa miệng và đôi mắt"
+                },
+                {
+                  "id": "D",
+                  "label": "Dựa trên cảm giác, không thể chỉ ra một đặc điểm cụ thể"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.4_A"
+              }
+            },
+            "Q2A.4_A": {
+              "id": "Q2A.4_A",
+              "text": "Nếu chỉ nhìn phần miệng mà không nhìn đôi mắt, bạn có còn cảm nhận được cảm xúc ban đầu không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.5_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.6_A"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Không chắc",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.7_A"
+                  }
+                }
+              ]
+            },
+            "Q2A.5_A": {
+              "id": "Q2A.5_A",
+              "text": "Khi nhìn thêm đôi mắt, chúng có củng cố cảm nhận ban đầu của bạn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.7_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.6_A"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Chúng khiến mình có cảm nhận khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.6_A"
+                  }
+                }
+              ]
+            },
+            "Q2A.6_A": {
+              "id": "Q2A.6_A",
+              "text": "Theo bạn, vì sao hai phần trên cùng một gương mặt có thể tạo ra những cảm nhận khác nhau?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Chúng thể hiện những cảm xúc khác nhau"
+                },
+                {
+                  "id": "B",
+                  "label": "Mình đang diễn giải chúng theo những cách khác nhau"
+                },
+                {
+                  "id": "C",
+                  "label": "Mình chưa thể xác định"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.7_A"
+              }
+            },
+            "Q2A.7_A": {
+              "id": "Q2A.7_A",
+              "text": "Bạn nghĩ qua chi tiết nụ cười, cảm xúc của người phụ nữ có thể được hiểu theo những cách nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Vui vẻ một cách kín đáo",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Bình thản nhưng xa cách",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3A"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Đang suy tư",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3A"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Chỉ là cười tạo dáng, không nhất thiết phải có một cảm xúc cụ thể",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.8_A"
+                  }
+                }
+              ]
+            },
+            "Q2A.8_A": {
+              "id": "Q2A.8_A",
+              "text": "Bạn muốn thử quan sát riêng đôi mắt và nụ cười thêm một lần nữa không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.5_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.1"
+                  },
+                  "note": "Chọn nhánh IF khác của Q2A.1 (ưu tiên nhánh người dùng chưa đi)"
+                }
+              ]
+            },
+            "Q2A.2_B": {
+              "id": "Q2A.2_B",
+              "text": "Bạn cảm thấy ánh mắt ấy như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Dịu dàng"
+                },
+                {
+                  "id": "B",
+                  "label": "Xa xăm"
+                },
+                {
+                  "id": "C",
+                  "label": "Trực tiếp, như đang nhìn mình"
+                },
+                {
+                  "id": "D",
+                  "label": "Khó xác định"
+                },
+                {
+                  "id": "E",
+                  "label": "Có phần lạnh lùng"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.3_B"
+              }
+            },
+            "Q2A.3_B": {
+              "id": "Q2A.3_B",
+              "text": "Điều gì khiến bạn có cảm nhận đó?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Hướng nhìn"
+                },
+                {
+                  "id": "B",
+                  "label": "Hình dáng đôi mắt"
+                },
+                {
+                  "id": "C",
+                  "label": "Sự kết hợp giữa ánh mắt và nụ cười"
+                },
+                {
+                  "id": "D",
+                  "label": "Tổng thể gương mặt"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.4_B"
+              }
+            },
+            "Q2A.4_B": {
+              "id": "Q2A.4_B",
+              "text": "Bạn có nghĩ ánh mắt và nụ cười đang thể hiện cùng một cảm xúc không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.5_B"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.6_B"
+                  }
+                }
+              ]
+            },
+            "Q2A.5_B": {
+              "id": "Q2A.5_B",
+              "text": "Nếu chúng thể hiện cùng một cảm xúc, bạn nghĩ cảm xúc đó là gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Bình yên"
+                },
+                {
+                  "id": "B",
+                  "label": "Hạnh phúc"
+                },
+                {
+                  "id": "C",
+                  "label": "Trầm tư"
+                },
+                {
+                  "id": "D",
+                  "label": "Một cảm xúc khác"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              }
+            },
+            "Q2A.6_B": {
+              "id": "Q2A.6_B",
+              "text": "Bạn nghĩ sự khác biệt giữa chúng có thể gợi ra điều gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nhân vật có nhiều cảm xúc cùng lúc"
+                },
+                {
+                  "id": "B",
+                  "label": "Biểu cảm không thể hiện rõ một cảm xúc cụ thể"
+                },
+                {
+                  "id": "C",
+                  "label": "Mình đang nhìn nhận mỗi chi tiết theo một cách khác nhau"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              }
+            },
+            "Q2A.2_C": {
+              "id": "Q2A.2_C",
+              "text": "Bạn nghĩ người phụ nữ đang nhìn về phía ai?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Người xem"
+                },
+                {
+                  "id": "B",
+                  "label": "Một người ở ngoài khung tranh"
+                },
+                {
+                  "id": "C",
+                  "label": "Một điểm nào đó trước mặt"
+                },
+                {
+                  "id": "D",
+                  "label": "Không thể xác định"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.3_C"
+              }
+            },
+            "Q2A.3_C": {
+              "id": "Q2A.3_C",
+              "text": "Nếu cô ấy đang nhìn bạn, bạn sẽ cảm thấy sự tương tác đó như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Gần gũi"
+                },
+                {
+                  "id": "B",
+                  "label": "Xa cách"
+                },
+                {
+                  "id": "C",
+                  "label": "Khó diễn tả"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.4_C"
+              }
+            },
+            "Q2A.4_C": {
+              "id": "Q2A.4_C",
+              "text": "Bạn có muốn quan sát đôi mắt của cô ấy kĩ hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2A.2_B"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3B"
+                  }
+                }
+              ]
+            },
+            "Q2A.2_D": {
+              "id": "Q2A.2_D",
+              "text": "Bạn có nhận thấy các đường nét trên gương mặt được chuyển tiếp khá mềm mại không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2A.3_D"
+              }
+            },
+            "Q2A.3_D": {
+              "id": "Q2A.3_D",
+              "text": "Bạn nghĩ cách chuyển tiếp giữa sáng và tối ảnh hưởng thế nào đến biểu cảm?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Khiến gương mặt mềm mại hơn"
+                },
+                {
+                  "id": "B",
+                  "label": "Khiến biểu cảm khó xác định hơn"
+                },
+                {
+                  "id": "C",
+                  "label": "Tạo chiều sâu"
+                },
+                {
+                  "id": "D",
+                  "label": "Không ảnh hưởng nhiều"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              },
+              "context_trigger": {
+                "condition": "Nếu người dùng muốn tìm hiểu kỹ thuật",
+                "context": [
+                  "C4"
+                ]
+              }
+            }
+          }
+        },
+        "BRANCH_2B": {
+          "id": "BRANCH_2B",
+          "title": "Ngôn ngữ hình thể, tư thế",
+          "entry_question": "Q2B.1",
+          "questions": {
+            "Q2B.1": {
+              "id": "Q2B.1",
+              "text": "Bạn chú ý đến điều gì trong tư thế của người phụ nữ?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cách đặt hai bàn tay",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2B.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Cách cô ấy ngồi",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2B.2_B"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Hướng vai và cơ thể",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2B.2_CD"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Cách đầu cô ấy xoay về phía người xem",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2B.2_CD"
+                  }
+                }
+              ]
+            },
+            "Q2B.2_A": {
+              "id": "Q2B.2_A",
+              "text": "Bạn cảm thấy cách đặt tay ấy như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Thư thái, tự nhiên"
+                },
+                {
+                  "id": "B",
+                  "label": "Trang trọng"
+                },
+                {
+                  "id": "C",
+                  "label": "Khép kín, dè dặt"
+                },
+                {
+                  "id": "D",
+                  "label": "Có phần gượng gạo"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2B.3_A"
+              }
+            },
+            "Q2B.3_A": {
+              "id": "Q2B.3_A",
+              "text": "Theo bạn, vị trí hai bàn tay có khiến tư thế của cô ấy trở nên khác biệt không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, tạo cảm giác điềm tĩnh"
+                },
+                {
+                  "id": "B",
+                  "label": "Có, tạo cảm giác kín đáo"
+                },
+                {
+                  "id": "C",
+                  "label": "Không, đây chỉ là tư thế ngồi thông thường"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2B.4_A"
+              }
+            },
+            "Q2B.4_A": {
+              "id": "Q2B.4_A",
+              "text": "Nếu người phụ nữ đặt hai tay ở một vị trí khác, bạn nghĩ ấn tượng về cô ấy có thay đổi không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              }
+            },
+            "Q2B.2_B": {
+              "id": "Q2B.2_B",
+              "text": "Tư thế ngồi khiến cô ấy trông như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Thư thái"
+                },
+                {
+                  "id": "B",
+                  "label": "Đứng đắn, trang trọng"
+                },
+                {
+                  "id": "C",
+                  "label": "Tự tin"
+                },
+                {
+                  "id": "D",
+                  "label": "Xa cách, lạnh lùng"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2B.3_B"
+              }
+            },
+            "Q2B.3_B": {
+              "id": "Q2B.3_B",
+              "text": "Bạn có cảm thấy cô ấy đang chủ động tạo dáng cho một bức chân dung không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2B.4_B"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3A"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Không chắc",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3A"
+                  }
+                }
+              ]
+            },
+            "Q2B.4_B": {
+              "id": "Q2B.4_B",
+              "text": "Bạn nghĩ điều gì tạo nên cảm giác đó?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Tư thế"
+                },
+                {
+                  "id": "B",
+                  "label": "Hướng nhìn"
+                },
+                {
+                  "id": "C",
+                  "label": "Cách đặt tay"
+                },
+                {
+                  "id": "D",
+                  "label": "Tổng thể bố cục"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              }
+            },
+            "Q2B.2_CD": {
+              "id": "Q2B.2_CD",
+              "text": "Bạn cảm thấy hướng cơ thể và hướng đầu của cô ấy có hòa hợp với nhau không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không, chúng tạo cảm giác hơi khác biệt"
+                },
+                {
+                  "id": "C",
+                  "label": "Không nhận thấy"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2B.3_CD"
+              }
+            },
+            "Q2B.3_CD": {
+              "id": "Q2B.3_CD",
+              "text": "Bạn nghĩ sự khác biệt hoặc hòa hợp đó ảnh hưởng thế nào đến cảm nhận về nhân vật?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Gần gũi hơn"
+                },
+                {
+                  "id": "B",
+                  "label": "Trang trọng hơn"
+                },
+                {
+                  "id": "C",
+                  "label": "Tự nhiên hơn"
+                },
+                {
+                  "id": "D",
+                  "label": "Không có ảnh hưởng rõ rệt"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3B"
+              }
+            }
+          }
+        },
+        "BRANCH_2C": {
+          "id": "BRANCH_2C",
+          "title": "Trang phục",
+          "entry_question": "Q2C.1",
+          "questions": {
+            "Q2C.1": {
+              "id": "Q2C.1",
+              "text": "Chi tiết nào trong diện mạo của người phụ nữ thu hút bạn nhất?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Mái tóc",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2C.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Trang phục",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2C.2_BC"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Lớp vải phủ trên đầu",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2C.2_BC"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Tổng thể diện mạo",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2C.2_D"
+                  }
+                }
+              ]
+            },
+            "Q2C.2_A": {
+              "id": "Q2C.2_A",
+              "text": "Bạn cảm thấy mái tóc được thể hiện như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Tự nhiên"
+                },
+                {
+                  "id": "B",
+                  "label": "Gọn gàng, có chủ ý"
+                },
+                {
+                  "id": "C",
+                  "label": "Khá đơn giản"
+                },
+                {
+                  "id": "D",
+                  "label": "Khó nhận xét"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2C.3_A"
+              }
+            },
+            "Q2C.3_A": {
+              "id": "Q2C.3_A",
+              "text": "Mái tóc có ảnh hưởng đến cảm nhận của bạn về nhân vật không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, khiến cô ấy trông gần gũi"
+                },
+                {
+                  "id": "B",
+                  "label": "Có, khiến cô ấy trông trang trọng"
+                },
+                {
+                  "id": "C",
+                  "label": "Không đáng kể"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              }
+            },
+            "Q2C.2_BC": {
+              "id": "Q2C.2_BC",
+              "text": "Bạn cảm nhận trang phục của cô ấy như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Giản dị, gần gũi"
+                },
+                {
+                  "id": "B",
+                  "label": "Trang trọng, quý phái"
+                },
+                {
+                  "id": "C",
+                  "label": "Thanh lịch, nhã nhặn"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2C.3_BC"
+              }
+            },
+            "Q2C.3_BC": {
+              "id": "Q2C.3_BC",
+              "text": "Những đặc điểm nào khiến bạn có nhận định đó?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Kiểu dáng"
+                },
+                {
+                  "id": "B",
+                  "label": "Chất liệu được thể hiện"
+                },
+                {
+                  "id": "C",
+                  "label": "Màu sắc"
+                },
+                {
+                  "id": "D",
+                  "label": "Cách trang phục được sắp xếp"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2C.4_BC"
+              }
+            },
+            "Q2C.4_BC": {
+              "id": "Q2C.4_BC",
+              "text": "Bạn nghĩ trang phục có thể cho biết điều gì về người được vẽ?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Địa vị xã hội"
+                },
+                {
+                  "id": "B",
+                  "label": "Lối sống"
+                },
+                {
+                  "id": "C",
+                  "label": "Cá tính"
+                },
+                {
+                  "id": "D",
+                  "label": "Không thể suy luận chỉ từ trang phục"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              },
+              "conditional_next": [
+                {
+                  "condition": "Người dùng nhắc đến hoặc muốn tìm hiểu lịch sử, thời đại, địa vị xã hội",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3D"
+                  }
+                }
+              ],
+              "context_trigger": {
+                "condition": "Nếu người dùng hỏi về quần áo, địa vị xã hội",
+                "context": [
+                  "C7"
+                ]
+              }
+            },
+            "Q2C.2_D": {
+              "id": "Q2C.2_D",
+              "text": "Bạn nghĩ diện mạo của cô ấy tạo ra ấn tượng tổng thể như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Gần gũi"
+                },
+                {
+                  "id": "B",
+                  "label": "Xa cách"
+                },
+                {
+                  "id": "C",
+                  "label": "Thanh lịch"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2C.3_D"
+              }
+            },
+            "Q2C.3_D": {
+              "id": "Q2C.3_D",
+              "text": "Có yếu tố nào bạn muốn quan sát kỹ hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Trang phục",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2C.2_BC"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Mái tóc",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2C.2_A"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Khuôn mặt",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_2A"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Không",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3A"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "BRANCH_2D": {
+          "id": "BRANCH_2D",
+          "title": "Phong cảnh",
+          "entry_question": "Q2D.1",
+          "questions": {
+            "Q2D.1": {
+              "id": "Q2D.1",
+              "text": "Điều gì thu hút bạn nhất trong khung cảnh phía sau?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Những dãy núi",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2D.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Dòng sông",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2D.2_BD"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Cây cầu",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2D.2_C"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Con đường uốn lượn",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2D.2_BD"
+                  }
+                },
+                {
+                  "id": "E",
+                  "label": "Sự mờ ảo của toàn bộ phong cảnh",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2D.2_E"
+                  }
+                },
+                {
+                  "id": "F",
+                  "label": "Sự khác biệt giữa nhân vật và cảnh vật",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2D.2_F"
+                  }
+                }
+              ],
+              "max_options_exception": true
+            },
+            "Q2D.2_A": {
+              "id": "Q2D.2_A",
+              "text": "Những dãy núi gợi cho bạn cảm giác gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Hùng vĩ"
+                },
+                {
+                  "id": "B",
+                  "label": "Bình yên"
+                },
+                {
+                  "id": "C",
+                  "label": "Xa xôi, lạnh lẽo"
+                },
+                {
+                  "id": "D",
+                  "label": "Kỳ lạ, khó xác định"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2D.3_A"
+              }
+            },
+            "Q2D.3_A": {
+              "id": "Q2D.3_A",
+              "text": "Bạn nghĩ những ngọn núi ấy tạo cảm giác gần hay xa?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Rất xa"
+                },
+                {
+                  "id": "B",
+                  "label": "Khá gần"
+                },
+                {
+                  "id": "C",
+                  "label": "Không thể xác định"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3C"
+              }
+            },
+            "Q2D.2_BD": {
+              "id": "Q2D.2_BD",
+              "text": "Bạn nhận thấy dòng sông và con đường có đặc điểm gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Chúng uốn lượn qua phong cảnh"
+                },
+                {
+                  "id": "B",
+                  "label": "Chúng tạo chiều sâu cho không gian"
+                },
+                {
+                  "id": "C",
+                  "label": "Chúng dẫn mắt đến một khu vực nào đó"
+                },
+                {
+                  "id": "D",
+                  "label": "Mình chưa nhận thấy đặc điểm cụ thể"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2D.3_BD"
+              }
+            },
+            "Q2D.3_BD": {
+              "id": "Q2D.3_BD",
+              "text": "Bạn nghĩ những đường nét ấy khiến không gian trông như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Rộng lớn"
+                },
+                {
+                  "id": "B",
+                  "label": "Sâu và xa"
+                },
+                {
+                  "id": "C",
+                  "label": "Mơ hồ"
+                },
+                {
+                  "id": "D",
+                  "label": "Tự nhiên"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3C"
+              }
+            },
+            "Q2D.2_C": {
+              "id": "Q2D.2_C",
+              "text": "Cây cầu khiến bạn liên tưởng đến điều gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Sự kết nối"
+                },
+                {
+                  "id": "B",
+                  "label": "Một địa điểm có con người sinh sống"
+                },
+                {
+                  "id": "C",
+                  "label": "Một dấu vết của hoạt động con người"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2D.3_C"
+              }
+            },
+            "Q2D.3_C": {
+              "id": "Q2D.3_C",
+              "text": "Bạn có nghĩ cây cầu khiến phong cảnh trở nên gần gũi hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3C"
+              }
+            },
+            "Q2D.2_E": {
+              "id": "Q2D.2_E",
+              "text": "Bạn cảm nhận sự mờ ảo của phong cảnh như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Khiến cảnh vật trông xa hơn"
+                },
+                {
+                  "id": "B",
+                  "label": "Khiến khung cảnh giống một giấc mơ"
+                },
+                {
+                  "id": "C",
+                  "label": "Khiến khó xác định các chi tiết"
+                },
+                {
+                  "id": "D",
+                  "label": "Khiến cảnh vật hòa vào nhau"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2D.3_E"
+              }
+            },
+            "Q2D.3_E": {
+              "id": "Q2D.3_E",
+              "text": "Bạn nghĩ sự mờ ảo này có liên quan đến cách người họa sĩ thể hiện chiều sâu không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Không biết"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3C"
+              },
+              "context_trigger": {
+                "condition": "Nếu người dùng muốn tìm hiểu kỹ thuật / hỏi về chiều sâu",
+                "context": [
+                  "C4",
+                  "C5"
+                ]
+              }
+            },
+            "Q2D.2_F": {
+              "id": "Q2D.2_F",
+              "text": "Bạn thấy sự khác biệt giữa nhân vật và cảnh vật thể hiện rõ nhất ở điểm nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Độ rõ nét"
+                },
+                {
+                  "id": "B",
+                  "label": "Màu sắc và ánh sáng"
+                },
+                {
+                  "id": "C",
+                  "label": "Kích thước, tỷ lệ"
+                },
+                {
+                  "id": "D",
+                  "label": "Bầu không khí"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3C"
+              },
+              "added_by_converter": true
+            }
+          }
+        },
+        "BRANCH_2E": {
+          "id": "BRANCH_2E",
+          "title": "Bố cục, màu sắc",
+          "entry_question": "Q2E.1",
+          "entry_rules": [
+            {
+              "condition": "Người dùng vào nhánh từ lựa chọn 'màu sắc/ánh sáng' (entry_hint = color_light) hoặc chọn màu sắc/ánh sáng ở bất kỳ câu hỏi nào",
+              "start_at": "Q2E.3"
+            },
+            {
+              "condition": "Các trường hợp còn lại",
+              "start_at": "Q2E.1"
+            }
+          ],
+          "questions": {
+            "Q2E.1": {
+              "id": "Q2E.1",
+              "text": "Bạn cảm thấy bố cục có đặc điểm nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cân đối, màu sắc hài hòa, dịu mắt"
+                },
+                {
+                  "id": "B",
+                  "label": "Tập trung rõ vào chủ thể chính"
+                },
+                {
+                  "id": "C",
+                  "label": "Có chiều sâu, đặc tả ánh sáng, tách lớp"
+                },
+                {
+                  "id": "D",
+                  "label": "Không rõ ràng"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2E.2"
+              },
+              "context_trigger": {
+                "condition": "Nếu người dùng hỏi về vị trí nhân vật và cách sắp xếp",
+                "context": [
+                  "C6"
+                ]
+              }
+            },
+            "Q2E.2": {
+              "id": "Q2E.2",
+              "text": "Nếu nhìn bức tranh từ xa hơn, bạn có nhận ra điều gì khác không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nhân vật và phong cảnh có mối liên hệ rõ hơn"
+                },
+                {
+                  "id": "B",
+                  "label": "Bố cục tổng thể trở nên nổi bật"
+                },
+                {
+                  "id": "C",
+                  "label": "Màu sắc hòa vào nhau"
+                },
+                {
+                  "id": "D",
+                  "label": "Mình vẫn chú ý đến cùng một chi tiết"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3A"
+              },
+              "routing_note": "Kịch bản gốc ghi 'Stage 3E'. Đã đổi về 3A vì 3E giả định người dùng đã có cách diễn giải. Có thể đổi lại nếu muốn."
+            },
+            "Q2E.3": {
+              "id": "Q2E.3",
+              "text": "Bạn nhận thấy ánh sáng trong tranh tập trung ở đâu?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Gương mặt và phần thân",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2E.3_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Khung cảnh phía sau",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2E.3_B"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Không có vùng sáng nổi bật",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2E.3_C"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Không chắc",
+                  "next": {
+                    "type": "question",
+                    "id": "Q2E.3_D"
+                  }
+                }
+              ],
+              "note": "Đánh số lại từ Q2E.4 trong kịch bản gốc (không có Q2E.3)."
+            },
+            "Q2E.3_A": {
+              "id": "Q2E.3_A",
+              "text": "Ánh sáng có khiến nhân vật nổi bật hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2E.2"
+              }
+            },
+            "Q2E.3_B": {
+              "id": "Q2E.3_B",
+              "text": "Ánh sáng có khiến bạn chú ý đến phong cảnh hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2E.2"
+              }
+            },
+            "Q2E.3_C": {
+              "id": "Q2E.3_C",
+              "text": "Bạn nghĩ sự chuyển tiếp giữa sáng và tối có khiến bức tranh trông tự nhiên hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2E.2"
+              },
+              "context_trigger": {
+                "condition": "Nếu người dùng hỏi về hiệu ứng chuyển tiếp sáng tối",
+                "context": [
+                  "C4"
+                ]
+              }
+            },
+            "Q2E.3_D": {
+              "id": "Q2E.3_D",
+              "text": "Bạn thử phóng to một chi tiết trong tranh và quan sát lại ánh sáng nhé. Bạn muốn thử không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, mình sẽ quan sát lại"
+                },
+                {
+                  "id": "B",
+                  "label": "Để lần sau"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q2E.2"
+              }
+            }
+          }
+        }
+      },
+      "exit_revisit": {
+        "questions": {
+          "Q2.F": {
+            "id": "Q2.F",
+            "text": "Bạn muốn tiếp tục khám phá theo hướng nào?",
+            "input_type": "choice_with_free_input",
+            "options": [
+              {
+                "id": "A",
+                "label": "Tìm hiểu sâu hơn chi tiết hiện tại",
+                "next": {
+                  "type": "dynamic",
+                  "rule": "return_current_branch"
+                }
+              },
+              {
+                "id": "B",
+                "label": "Khám phá một chi tiết khác",
+                "next": {
+                  "type": "dynamic",
+                  "rule": "open_unexplored_branch_list"
+                }
+              },
+              {
+                "id": "C",
+                "label": "So sánh hai chi tiết",
+                "next": {
+                  "type": "dynamic",
+                  "rule": "cross_branch_questions"
+                }
+              },
+              {
+                "id": "D",
+                "label": "Tìm hiểu ý nghĩa hoặc bối cảnh lịch sử",
+                "next": {
+                  "type": "dynamic",
+                  "rule": "pending_stage3_branch"
+                }
+              },
+              {
+                "id": "E",
+                "label": "Quay lại ấn tượng ban đầu",
+                "next": {
+                  "type": "question",
+                  "id": "Q1"
+                },
+                "revisit": true
+              },
+              {
+                "id": "F",
+                "label": "Kết thúc phần khám phá",
+                "next": {
+                  "type": "stage",
+                  "id": "STAGE_4"
+                }
+              }
+            ],
+            "max_options_exception": true,
+            "note": "Hiển thị khi người dùng hoàn thành một nhánh Stage 2, trước khi chuyển sang Stage 3. Nhánh Stage 3 đích ban đầu được lưu vào state.pending_next. Q2.F có 6 lựa chọn theo kịch bản gốc."
+          }
+        }
+      },
+      "cross_branch_questions": [
+        {
+          "if_explored": [
+            "BRANCH_2A",
+            "BRANCH_2B"
+          ],
+          "questions": [
+            "Bạn nghĩ biểu cảm và tư thế của người phụ nữ có bổ trợ cho nhau không?",
+            "Nếu chỉ thay đổi tư thế mà giữ nguyên biểu cảm, bạn có cảm nhận khác không?"
+          ],
+          "input_type": "free_text_or_options",
+          "next_after_answer": {
+            "type": "dynamic",
+            "rule": "return_current_branch"
+          }
+        },
+        {
+          "if_explored": [
+            "BRANCH_2A",
+            "BRANCH_2D"
+          ],
+          "questions": [
+            "Bạn nghĩ gương mặt và khung cảnh phía sau có tạo ra cùng một bầu không khí không?",
+            "Nếu người phụ nữ có biểu cảm khác, khung cảnh có khiến bạn cảm nhận bức tranh theo cách khác không?"
+          ],
+          "input_type": "free_text_or_options",
+          "next_after_answer": {
+            "type": "dynamic",
+            "rule": "return_current_branch"
+          }
+        },
+        {
+          "if_explored": [
+            "BRANCH_2B",
+            "BRANCH_2C"
+          ],
+          "questions": [
+            "Bạn nghĩ tư thế và trang phục có thể giúp thể hiện hình ảnh xã hội của người phụ nữ không?",
+            "Có chi tiết nào khiến bạn cảm thấy nhân vật đang chủ động tạo dựng hình ảnh của mình không?"
+          ],
+          "input_type": "free_text_or_options",
+          "next_after_answer": {
+            "type": "dynamic",
+            "rule": "return_current_branch"
+          }
+        },
+        {
+          "if_explored": [
+            "BRANCH_2D",
+            "BRANCH_2E"
+          ],
+          "questions": [
+            "Bạn nghĩ cách bố trí phong cảnh ảnh hưởng thế nào đến chiều sâu của bức tranh?",
+            "Nếu phong cảnh không được thể hiện với chiều sâu như hiện tại, bạn nghĩ nhân vật có nổi bật như vậy không?"
+          ],
+          "input_type": "free_text_or_options",
+          "next_after_answer": {
+            "type": "dynamic",
+            "rule": "return_current_branch"
+          }
+        },
+        {
+          "if_explored": [
+            "BRANCH_2A",
+            "BRANCH_2B",
+            "BRANCH_2D"
+          ],
+          "questions": [
+            "Khi kết hợp gương mặt, tư thế và khung cảnh, bạn có nhận thấy một câu chuyện nào đang hình thành trong đầu mình không?"
+          ],
+          "input_type": "free_text_or_options",
+          "next_after_answer": {
+            "type": "dynamic",
+            "rule": "return_current_branch"
+          }
+        }
+      ]
+    },
+    "STAGE_3": {
+      "id": "STAGE_3",
+      "name": "INTERPRETATION & CONTEXT",
+      "goal": "Diễn giải cảm xúc, liên hệ bản thân, tìm hiểu bối cảnh và cân nhắc góc nhìn khác",
+      "branches": {
+        "BRANCH_3A": {
+          "id": "BRANCH_3A",
+          "title": "Phân tích cảm xúc",
+          "entry_question": "Q3A.1",
+          "questions": {
+            "Q3A.1": {
+              "id": "Q3A.1",
+              "text": "Dựa trên những chi tiết bạn đã quan sát, bạn nghĩ người phụ nữ có thể đang cảm thấy điều gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Hạnh phúc",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Bình thản, thư thái",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2_B"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Suy tư",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2_C"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Bí ẩn, có điều gì đó chưa được bộc lộ",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2_D"
+                  }
+                },
+                {
+                  "id": "E",
+                  "label": "Nhiều cảm xúc cùng lúc",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2_E"
+                  }
+                },
+                {
+                  "id": "F",
+                  "label": "Không thể xác định",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2_F"
+                  }
+                }
+              ],
+              "max_options_exception": true
+            },
+            "Q3A.2_A": {
+              "id": "Q3A.2_A",
+              "text": "Bạn nghĩ một người đang hạnh phúc có nhất thiết phải thể hiện cảm xúc rõ ràng không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, cần có biểu hiện cụ thể trên gương mặt"
+                },
+                {
+                  "id": "B",
+                  "label": "Không, hạnh phúc có thể kín đáo"
+                },
+                {
+                  "id": "C",
+                  "label": "Tùy vào từng thời điểm"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.3_A"
+              }
+            },
+            "Q3A.3_A": {
+              "id": "Q3A.3_A",
+              "text": "Có chi tiết nào khiến bạn nghĩ người phụ nữ đang cảm thấy hài lòng không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nụ cười"
+                },
+                {
+                  "id": "B",
+                  "label": "Ánh mắt"
+                },
+                {
+                  "id": "C",
+                  "label": "Tư thế"
+                },
+                {
+                  "id": "D",
+                  "label": "Không có chi tiết cụ thể"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.4"
+              }
+            },
+            "Q3A.2_B": {
+              "id": "Q3A.2_B",
+              "text": "Bạn nghĩ sự bình thản của cô ấy đến từ đâu?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cô ấy đang cảm thấy thoải mái"
+                },
+                {
+                  "id": "B",
+                  "label": "Cô ấy đang kiểm soát biểu cảm"
+                },
+                {
+                  "id": "C",
+                  "label": "Cô ấy không muốn thể hiện cảm xúc"
+                },
+                {
+                  "id": "D",
+                  "label": "Mình chỉ cảm nhận được sự bình thản"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.3_B"
+              }
+            },
+            "Q3A.3_B": {
+              "id": "Q3A.3_B",
+              "text": "Bạn có nghĩ sự bình thản và hạnh phúc là hai cảm xúc khác nhau không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không nhất thiết"
+                },
+                {
+                  "id": "C",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.4"
+              }
+            },
+            "Q3A.2_C": {
+              "id": "Q3A.2_C",
+              "text": "Bạn nghĩ cô ấy có thể đang suy nghĩ về điều gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Một người nào đó"
+                },
+                {
+                  "id": "B",
+                  "label": "Một sự kiện"
+                },
+                {
+                  "id": "C",
+                  "label": "Bản thân mình"
+                },
+                {
+                  "id": "D",
+                  "label": "Không có nội dung cụ thể"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.3_C"
+              }
+            },
+            "Q3A.3_C": {
+              "id": "Q3A.3_C",
+              "text": "Chi tiết nào khiến bạn tưởng tượng ra điều đó?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Ánh mắt"
+                },
+                {
+                  "id": "B",
+                  "label": "Nụ cười"
+                },
+                {
+                  "id": "C",
+                  "label": "Tư thế"
+                },
+                {
+                  "id": "D",
+                  "label": "Tổng thể"
+                },
+                {
+                  "id": "E",
+                  "label": "Suy đoán cá nhân"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.6"
+              }
+            },
+            "Q3A.2_D": {
+              "id": "Q3A.2_D",
+              "text": "Bạn nghĩ cô ấy đang che giấu điều gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nỗi buồn"
+                },
+                {
+                  "id": "B",
+                  "label": "Niềm vui"
+                },
+                {
+                  "id": "C",
+                  "label": "Một suy nghĩ riêng tư"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.3_D"
+              }
+            },
+            "Q3A.3_D": {
+              "id": "Q3A.3_D",
+              "text": "Có chi tiết nào khiến bạn nghĩ cô ấy đang giấu điều gì không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nụ cười"
+                },
+                {
+                  "id": "B",
+                  "label": "Ánh mắt"
+                },
+                {
+                  "id": "C",
+                  "label": "Tổng thể biểu cảm"
+                }
+              ],
+              "default_next": {
+                "type": "branch",
+                "id": "BRANCH_3E"
+              }
+            },
+            "Q3A.2_E": {
+              "id": "Q3A.2_E",
+              "text": "Những cảm xúc nào bạn nghĩ có thể cùng tồn tại trên gương mặt cô ấy?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Vui vẻ và buồn bã"
+                },
+                {
+                  "id": "B",
+                  "label": "Bình thản và suy tư"
+                },
+                {
+                  "id": "C",
+                  "label": "Thân thiện và xa cách"
+                },
+                {
+                  "id": "D",
+                  "label": "Một sự kết hợp khác"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.3_E"
+              }
+            },
+            "Q3A.3_E": {
+              "id": "Q3A.3_E",
+              "text": "Bạn nghĩ việc một người có nhiều cảm xúc cùng lúc có khiến biểu cảm trở nên khó hiểu hơn không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Tùy trường hợp"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.6"
+              }
+            },
+            "Q3A.2_F": {
+              "id": "Q3A.2_F",
+              "text": "Bạn muốn tiếp tục tìm kiếm một cảm xúc cụ thể hay chấp nhận rằng mình chưa thể xác định?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Tiếp tục khám phá",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_2A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Giữ nhiều khả năng",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.6"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Chuyển sang khía cạnh khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3A.2F_switch"
+                  }
+                }
+              ]
+            },
+            "Q3A.2F_switch": {
+              "id": "Q3A.2F_switch",
+              "text": "Bạn muốn chuyển sang khía cạnh nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Mối quan hệ giữa bạn và người phụ nữ",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3B"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Ảnh hưởng của phong cảnh phía sau",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3C"
+                  }
+                }
+              ],
+              "added_by_converter": true
+            },
+            "Q3A.4": {
+              "id": "Q3A.4",
+              "text": "Bạn nghĩ cảm xúc ấy là một khoảnh khắc thoáng qua hay một trạng thái kéo dài?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Một khoảnh khắc thoáng qua"
+                },
+                {
+                  "id": "B",
+                  "label": "Một trạng thái kéo dài"
+                },
+                {
+                  "id": "C",
+                  "label": "Do họa sĩ chủ ý thể hiện"
+                },
+                {
+                  "id": "D",
+                  "label": "Mình chưa thể biết"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.6"
+              },
+              "added_by_converter": true
+            },
+            "Q3A.6": {
+              "id": "Q3A.6",
+              "text": "Nếu một người khác nhìn thấy bức tranh và đưa ra một cách diễn giải hoàn toàn khác bạn, bạn nghĩ họ có thể dựa vào những chi tiết nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nụ cười"
+                },
+                {
+                  "id": "B",
+                  "label": "Ánh mắt"
+                },
+                {
+                  "id": "C",
+                  "label": "Tư thế"
+                },
+                {
+                  "id": "D",
+                  "label": "Những chi tiết khác"
+                },
+                {
+                  "id": "E",
+                  "label": "Mình chưa nghĩ đến"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3A.7"
+              }
+            },
+            "Q3A.7": {
+              "id": "Q3A.7",
+              "text": "Sau khi cân nhắc nhiều cách diễn giải, bạn muốn giữ quan điểm nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Giữ nguyên cách hiểu ban đầu"
+                },
+                {
+                  "id": "B",
+                  "label": "Thay đổi cách hiểu"
+                },
+                {
+                  "id": "C",
+                  "label": "Giữ nhiều cách hiểu cùng lúc"
+                },
+                {
+                  "id": "D",
+                  "label": "Chưa đưa ra kết luận"
+                }
+              ],
+              "default_next": {
+                "type": "stage",
+                "id": "STAGE_4"
+              },
+              "alternative_next": {
+                "type": "branch",
+                "id": "BRANCH_3E"
+              }
+            }
+          }
+        },
+        "BRANCH_3B": {
+          "id": "BRANCH_3B",
+          "title": "Liên hệ bản thân",
+          "entry_question": "Q3B.1",
+          "questions": {
+            "Q3B.1": {
+              "id": "Q3B.1",
+              "text": "Khi nhìn vào bức tranh, bạn cảm thấy mối quan hệ giữa mình và người phụ nữ như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cô ấy đang nhìn trực tiếp vào mình",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3B.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Mình đang quan sát một người không biết đến sự hiện diện của mình",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3B.2_B"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Mình có cảm giác đang tham gia vào một khoảnh khắc riêng tư",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3B.2_C"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Có một khoảng cách giữa mình và cô ấy",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3B.2_D"
+                  }
+                },
+                {
+                  "id": "E",
+                  "label": "Không cảm thấy mối quan hệ cụ thể",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3B.2_E"
+                  }
+                }
+              ]
+            },
+            "Q3B.2_A": {
+              "id": "Q3B.2_A",
+              "text": "Ánh nhìn ấy khiến bạn cảm thấy như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Được chú ý"
+                },
+                {
+                  "id": "B",
+                  "label": "Được chào đón"
+                },
+                {
+                  "id": "C",
+                  "label": "Bị quan sát"
+                },
+                {
+                  "id": "D",
+                  "label": "Khó diễn tả"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.3_A"
+              }
+            },
+            "Q3B.3_A": {
+              "id": "Q3B.3_A",
+              "text": "Bạn nghĩ điều gì tạo ra cảm giác đó?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Hướng nhìn"
+                },
+                {
+                  "id": "B",
+                  "label": "Nụ cười"
+                },
+                {
+                  "id": "C",
+                  "label": "Sự kết hợp của cả hai"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.5"
+              }
+            },
+            "Q3B.2_B": {
+              "id": "Q3B.2_B",
+              "text": "Bạn nghĩ người phụ nữ có vẻ đang tập trung vào điều gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Một suy nghĩ riêng"
+                },
+                {
+                  "id": "B",
+                  "label": "Một người ở ngoài khung tranh"
+                },
+                {
+                  "id": "C",
+                  "label": "Không có điều gì cụ thể"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.3_B"
+              }
+            },
+            "Q3B.3_B": {
+              "id": "Q3B.3_B",
+              "text": "Bạn nghĩ điều gì khiến cô ấy trông như đang tách biệt khỏi người xem?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Biểu cảm"
+                },
+                {
+                  "id": "B",
+                  "label": "Tư thế"
+                },
+                {
+                  "id": "C",
+                  "label": "Ánh mắt"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.5"
+              }
+            },
+            "Q3B.2_C": {
+              "id": "Q3B.2_C",
+              "text": "Bạn tưởng tượng khoảnh khắc ấy diễn ra như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Một cuộc trò chuyện"
+                },
+                {
+                  "id": "B",
+                  "label": "Một buổi gặp mặt trang trọng"
+                },
+                {
+                  "id": "C",
+                  "label": "Một khoảnh khắc yên tĩnh"
+                },
+                {
+                  "id": "D",
+                  "label": "Một tình huống khác"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.3_C"
+              }
+            },
+            "Q3B.3_C": {
+              "id": "Q3B.3_C",
+              "text": "Chi tiết nào khiến bạn tưởng tượng ra tình huống đó?",
+              "input_type": "free_text",
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.5"
+              }
+            },
+            "Q3B.2_D": {
+              "id": "Q3B.2_D",
+              "text": "Bạn nghĩ khoảng cách ấy đến từ đâu?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Nhân vật ở trong một thế giới khác"
+                },
+                {
+                  "id": "B",
+                  "label": "Biểu cảm khó tiếp cận"
+                },
+                {
+                  "id": "C",
+                  "label": "Cách bố cục đặt nhân vật"
+                },
+                {
+                  "id": "D",
+                  "label": "Cảm nhận cá nhân"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.5"
+              },
+              "context_trigger": {
+                "condition": "Nếu người dùng hỏi về cách bố cục đặt nhân vật",
+                "context": [
+                  "C6"
+                ]
+              }
+            },
+            "Q3B.2_E": {
+              "id": "Q3B.2_E",
+              "text": "Nếu người phụ nữ có thể nói một câu với người xem, bạn nghĩ cô ấy sẽ nói gì?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Một lời chào"
+                },
+                {
+                  "id": "B",
+                  "label": "Một câu hỏi"
+                },
+                {
+                  "id": "C",
+                  "label": "Một lời tâm sự"
+                },
+                {
+                  "id": "D",
+                  "label": "Không nói gì"
+                },
+                {
+                  "id": "E",
+                  "label": "Một câu khác"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3B.5"
+              }
+            },
+            "Q3B.5": {
+              "id": "Q3B.5",
+              "text": "Nếu thay đổi hướng nhìn của người phụ nữ, bạn nghĩ mối quan hệ giữa nhân vật và người xem có thay đổi không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, rất nhiều"
+                },
+                {
+                  "id": "B",
+                  "label": "Có, nhưng không đáng kể"
+                },
+                {
+                  "id": "C",
+                  "label": "Không"
+                },
+                {
+                  "id": "D",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3E.1"
+              }
+            }
+          }
+        },
+        "BRANCH_3C": {
+          "id": "BRANCH_3C",
+          "title": "Ảnh hưởng của phong cảnh",
+          "entry_question": "Q3C.1",
+          "questions": {
+            "Q3C.1": {
+              "id": "Q3C.1",
+              "text": "Bạn nghĩ người phụ nữ và khung cảnh phía sau có mối liên hệ như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cô ấy chỉ đang xuất hiện, tạo dáng trước một khung cảnh đẹp",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3C.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Hai phần tạo ra sự tương phản",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3C.2_B"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Khung cảnh góp phần phản ánh tâm trạng nhân vật",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3C.2_C"
+                  }
+                }
+              ]
+            },
+            "Q3C.2_A": {
+              "id": "Q3C.2_A",
+              "text": "Nếu thay đổi khung cảnh phía sau, bạn nghĩ điều gì sẽ ảnh hưởng nhiều nhất?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cảm xúc về nhân vật"
+                },
+                {
+                  "id": "B",
+                  "label": "Bầu không khí bức tranh"
+                },
+                {
+                  "id": "C",
+                  "label": "Câu chuyện mình tưởng tượng"
+                },
+                {
+                  "id": "D",
+                  "label": "Không có thay đổi đáng kể"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3C.6"
+              }
+            },
+            "Q3C.2_B": {
+              "id": "Q3C.2_B",
+              "text": "Bạn cảm thấy sự tương phản nằm ở đâu?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Giữa con người và thiên nhiên"
+                },
+                {
+                  "id": "B",
+                  "label": "Giữa nhân vật và không gian rộng lớn"
+                },
+                {
+                  "id": "C",
+                  "label": "Giữa sự rõ nét và mờ ảo"
+                },
+                {
+                  "id": "D",
+                  "label": "Một yếu tố khác"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3C.6"
+              }
+            },
+            "Q3C.2_C": {
+              "id": "Q3C.2_C",
+              "text": "Bạn nghĩ phong cảnh có thể phản ánh cảm xúc nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Bình yên"
+                },
+                {
+                  "id": "B",
+                  "label": "Cô đơn"
+                },
+                {
+                  "id": "C",
+                  "label": "Bí ẩn"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3C.3"
+              }
+            },
+            "Q3C.3": {
+              "id": "Q3C.3",
+              "text": "Có chi tiết nào khiến bạn liên tưởng đến cảm xúc đó không?",
+              "input_type": "free_text",
+              "default_next": {
+                "type": "question",
+                "id": "Q3C.6"
+              }
+            },
+            "Q3C.6": {
+              "id": "Q3C.6",
+              "text": "Khi nghĩ về mối liên hệ giữa nhân vật và phong cảnh, bạn có thấy mình nhìn người phụ nữ theo cách khác đi không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, cô ấy trở nên gần gũi hơn"
+                },
+                {
+                  "id": "B",
+                  "label": "Có, cô ấy trở nên bí ẩn hơn"
+                },
+                {
+                  "id": "C",
+                  "label": "Không, mình vẫn nhìn cô ấy như trước"
+                },
+                {
+                  "id": "D",
+                  "label": "Chưa chắc"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3E.1"
+              },
+              "added_by_converter": true
+            }
+          }
+        },
+        "BRANCH_3D": {
+          "id": "BRANCH_3D",
+          "title": "Kiến thức hội họa và bối cảnh lịch sử",
+          "entry_question": "Q3D.1",
+          "activation_conditions": [
+            "Đặt câu hỏi về danh tính",
+            "Hỏi về trang phục, thời đại hoặc tầng lớp xã hội",
+            "Muốn biết về người họa sĩ",
+            "Muốn hiểu kỹ thuật hội họa",
+            "Muốn tìm hiểu lý do tác phẩm được đánh giá cao"
+          ],
+          "note": "Sau context: đặt một câu hỏi kết nối, không giảng giải thêm nếu người dùng không yêu cầu.",
+          "questions": {
+            "Q3D.1": {
+              "id": "Q3D.1",
+              "text": "Bạn muốn tìm hiểu điều gì về bức tranh?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Người phụ nữ trong tranh là ai?",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.2_A"
+                  },
+                  "context": [
+                    "C1"
+                  ]
+                },
+                {
+                  "id": "B",
+                  "label": "Bức tranh được vẽ trong hoàn cảnh nào?",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.2_B"
+                  },
+                  "context": [
+                    "C2",
+                    "C3"
+                  ]
+                },
+                {
+                  "id": "C",
+                  "label": "Trang phục phản ánh điều gì về thời đại đó?",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.2_C"
+                  },
+                  "context": [
+                    "C7"
+                  ]
+                },
+                {
+                  "id": "D",
+                  "label": "Leonardo đã sử dụng kỹ thuật gì?",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.2_D"
+                  },
+                  "context": [
+                    "C4",
+                    "C5"
+                  ]
+                },
+                {
+                  "id": "E",
+                  "label": "Vì sao bức tranh trở nên nổi tiếng?",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.2_E"
+                  },
+                  "context": [
+                    "C8"
+                  ]
+                },
+                {
+                  "id": "F",
+                  "label": "Mình muốn tìm hiểu một vấn đề khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.F"
+                  }
+                }
+              ],
+              "max_options_exception": true,
+              "note": "Nếu người dùng hỏi về bố cục/vị trí nhân vật thì hiển thị C6."
+            },
+            "Q3D.2_A": {
+              "id": "Q3D.2_A",
+              "text": "Biết người phụ nữ thường được xác định là Lisa Gherardini, bạn có nhìn nhận chân dung này khác đi không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, mình bắt đầu chú ý đến con người thực phía sau bức tranh",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Có, mình tò mò về cuộc sống của bà",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Không, cảm nhận vẫn như trước",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Mình có câu hỏi khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.1"
+                  }
+                }
+              ]
+            },
+            "Q3D.2_B": {
+              "id": "Q3D.2_B",
+              "text": "Biết bức tranh được thực hiện trong nhiều năm từ đầu thế kỷ 16, bạn nghĩ điều đó có liên quan đến cách người phụ nữ được thể hiện không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có, nó cho thấy sự tỉ mỉ",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không, mình thấy chúng không liên quan",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Mình chưa chắc",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Mình có câu hỏi khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.1"
+                  }
+                }
+              ],
+              "added_by_converter": true
+            },
+            "Q3D.2_C": {
+              "id": "Q3D.2_C",
+              "text": "Thông tin về tầng lớp thương nhân có khiến bạn chú ý đến trang phục và cảm nhận về người mặc theo một cách khác không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Mình muốn tìm hiểu về chi tiết khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.1"
+                  }
+                }
+              ]
+            },
+            "Q3D.2_D": {
+              "id": "Q3D.2_D",
+              "text": "Khi biết về những kỹ thuật này, bạn có muốn quay lại quan sát chi tiết nào để xem hiệu ứng của chúng không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Gương mặt",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_2A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Phong cảnh",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_2D"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Không, mình muốn tìm hiểu điều khác",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3D.1"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "Mình muốn tiếp tục sang phần phản tư",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                }
+              ],
+              "added_by_converter": true
+            },
+            "Q3D.2_E": {
+              "id": "Q3D.2_E",
+              "text": "Cá nhân bạn nghĩ điều gì khiến một tác phẩm trở nên nổi tiếng?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Kỹ thuật và chất lượng nghệ thuật"
+                },
+                {
+                  "id": "B",
+                  "label": "Câu chuyện lịch sử"
+                },
+                {
+                  "id": "C",
+                  "label": "Sự phổ biến trong văn hóa đại chúng"
+                },
+                {
+                  "id": "D",
+                  "label": "Tác động của người họa sĩ"
+                },
+                {
+                  "id": "E",
+                  "label": "Sự kết hợp của nhiều yếu tố"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3D.3_E"
+              }
+            },
+            "Q3D.3_E": {
+              "id": "Q3D.3_E",
+              "text": "Theo bạn, một bức tranh có cần nổi tiếng mới có giá trị nghệ thuật không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có"
+                },
+                {
+                  "id": "B",
+                  "label": "Không"
+                },
+                {
+                  "id": "C",
+                  "label": "Tùy vào cách đánh giá"
+                }
+              ],
+              "default_next": {
+                "type": "stage",
+                "id": "STAGE_4"
+              }
+            },
+            "Q3D.F": {
+              "id": "Q3D.F",
+              "text": "Bạn muốn tìm hiểu điều gì? Hãy nhập câu hỏi của bạn.",
+              "input_type": "free_text",
+              "handling": [
+                "Phân loại câu hỏi vào các chủ đề tương ứng (C1-C8).",
+                "Chỉ cung cấp thông tin nếu có cơ sở đáng tin cậy.",
+                "Nếu không đủ thông tin, nói rõ giới hạn thay vì suy đoán.",
+                "Sau khi trả lời, đặt một câu hỏi kết nối với quan sát trước đó."
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3D.1"
+              }
+            }
+          }
+        },
+        "BRANCH_3E": {
+          "id": "BRANCH_3E",
+          "title": "Tìm hiểu, cân nhắc góc nhìn khác",
+          "entry_question": "Q3E.1",
+          "questions": {
+            "Q3E.1": {
+              "id": "Q3E.1",
+              "text": "Bạn đã hình thành một cách diễn giải về bức tranh. Bạn có muốn thử nhìn nó theo một hướng khác không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3E.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không, mình muốn giữ cách hiểu hiện tại",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Mình muốn kiểm tra xem cách hiểu của mình có cơ sở không",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3E.2_C"
+                  }
+                }
+              ]
+            },
+            "Q3E.2_A": {
+              "id": "Q3E.2_A",
+              "text": "Bạn muốn thử thay đổi góc nhìn theo chi tiết nào, và bạn sẽ diễn giải về nó ra sao?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Cảm xúc của người phụ nữ"
+                },
+                {
+                  "id": "B",
+                  "label": "Mối quan hệ giữa người phụ nữ và người xem"
+                },
+                {
+                  "id": "C",
+                  "label": "Mối liên hệ giữa nhân vật và phong cảnh"
+                },
+                {
+                  "id": "D",
+                  "label": "Ý nghĩa của các chi tiết"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3E.3_A"
+              }
+            },
+            "Q3E.3_A": {
+              "id": "Q3E.3_A",
+              "text": "Khi nhìn theo cách mới này, cảm nhận của bạn về bức tranh thay đổi như thế nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Thay đổi rõ rệt"
+                },
+                {
+                  "id": "B",
+                  "label": "Được bổ sung thêm"
+                },
+                {
+                  "id": "C",
+                  "label": "Không thay đổi"
+                },
+                {
+                  "id": "D",
+                  "label": "Mình chưa rõ"
+                }
+              ],
+              "default_next": {
+                "type": "stage",
+                "id": "STAGE_4"
+              },
+              "added_by_converter": true
+            },
+            "Q3E.2_C": {
+              "id": "Q3E.2_C",
+              "text": "Bạn nghĩ nhận định của mình đang dựa trên yếu tố nào?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Chi tiết nhìn thấy trực tiếp"
+                },
+                {
+                  "id": "B",
+                  "label": "Liên tưởng cá nhân"
+                },
+                {
+                  "id": "C",
+                  "label": "Kiến thức bên ngoài"
+                },
+                {
+                  "id": "D",
+                  "label": "Kết hợp nhiều yếu tố"
+                }
+              ],
+              "default_next": {
+                "type": "question",
+                "id": "Q3E.3_C"
+              }
+            },
+            "Q3E.3_C": {
+              "id": "Q3E.3_C",
+              "text": "Có chi tiết nào có thể khiến bạn thay đổi nhận định không?",
+              "input_type": "choice_with_free_input",
+              "options": [
+                {
+                  "id": "A",
+                  "label": "Có",
+                  "next": {
+                    "type": "question",
+                    "id": "Q3E.2_A"
+                  }
+                },
+                {
+                  "id": "B",
+                  "label": "Không",
+                  "next": {
+                    "type": "stage",
+                    "id": "STAGE_4"
+                  }
+                },
+                {
+                  "id": "C",
+                  "label": "Mình muốn tìm hiểu thêm thông tin tranh",
+                  "next": {
+                    "type": "branch",
+                    "id": "BRANCH_3D"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "STAGE_4": {
+      "id": "STAGE_4",
+      "name": "REFLECTION & REVISIT",
+      "entry_question": "Q4.1",
+      "questions": {
+        "Q4.1": {
+          "id": "Q4.1",
+          "text": "Sau khi quan sát và khám phá bức tranh, ấn tượng đầu tiên của bạn có thay đổi không?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Có, thay đổi đáng kể",
+              "next": {
+                "type": "question",
+                "id": "Q4.2_A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Có, nhưng chỉ một phần",
+              "next": {
+                "type": "question",
+                "id": "Q4.2_B"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Không, vẫn giữ nguyên",
+              "next": {
+                "type": "question",
+                "id": "Q4.2_C"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Mình có thêm nhiều cảm nhận mới",
+              "next": {
+                "type": "question",
+                "id": "Q4.2_D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Mình vẫn chưa có kết luận",
+              "next": {
+                "type": "question",
+                "id": "Q4.2_E"
+              }
+            }
+          ]
+        },
+        "Q4.2_A": {
+          "id": "Q4.2_A",
+          "text": "Điều gì khiến bạn thay đổi cách nhìn?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Một chi tiết trước đây chưa chú ý"
+            },
+            {
+              "id": "B",
+              "label": "Mối liên hệ giữa nhiều chi tiết"
+            },
+            {
+              "id": "C",
+              "label": "Một cách diễn giải mới"
+            },
+            {
+              "id": "D",
+              "label": "Kiến thức lịch sử"
+            },
+            {
+              "id": "E",
+              "label": "Một câu hỏi khiến mình suy nghĩ lại"
+            }
+          ],
+          "default_next": {
+            "type": "question",
+            "id": "Q4.3_A"
+          }
+        },
+        "Q4.3_A": {
+          "id": "Q4.3_A",
+          "text": "Nếu phải mô tả bức tranh bằng một câu ở thời điểm hiện tại, bạn sẽ nói gì?",
+          "input_type": "free_text",
+          "default_next": {
+            "type": "question",
+            "id": "Q4.5"
+          },
+          "purpose": "Free input, xác nhận người dùng đã tìm hiểu."
+        },
+        "Q4.2_B": {
+          "id": "Q4.2_B",
+          "text": "Điều gì đã thay đổi trong cách bạn hiểu bức tranh?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Mình nhận ra nhiều chi tiết hơn"
+            },
+            {
+              "id": "B",
+              "label": "Mình có thêm cách giải thích"
+            },
+            {
+              "id": "C",
+              "label": "Mình hiểu rõ hơn cảm nhận ban đầu"
+            },
+            {
+              "id": "D",
+              "label": "Mình chỉ thay đổi một phần nhỏ"
+            }
+          ],
+          "default_next": {
+            "type": "question",
+            "id": "Q4.3_B"
+          }
+        },
+        "Q4.3_B": {
+          "id": "Q4.3_B",
+          "text": "Có chi tiết nào khiến bạn suy nghĩ nhiều nhất?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Gương mặt"
+            },
+            {
+              "id": "B",
+              "label": "Đôi bàn tay"
+            },
+            {
+              "id": "C",
+              "label": "Trang phục"
+            },
+            {
+              "id": "D",
+              "label": "Phong cảnh"
+            },
+            {
+              "id": "E",
+              "label": "Bố cục"
+            }
+          ],
+          "default_next": {
+            "type": "question",
+            "id": "Q4.4_B"
+          },
+          "store_as": "selected_detail"
+        },
+        "Q4.4_B": {
+          "id": "Q4.4_B",
+          "text": "Bạn muốn tiếp tục khám phá chi tiết ấy không?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Có",
+              "next": {
+                "type": "dynamic",
+                "rule": "revisit_branch_of_selected_detail"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Không",
+              "next": {
+                "type": "question",
+                "id": "Q4.5"
+              }
+            }
+          ]
+        },
+        "Q4.2_C": {
+          "id": "Q4.2_C",
+          "text": "Sau khi quan sát kỹ hơn, bạn có tìm thấy thêm lý do cho cảm nhận ban đầu không?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Có, mình hiểu rõ hơn"
+            },
+            {
+              "id": "B",
+              "label": "Có, nhưng nhận ra những yếu tố khác"
+            },
+            {
+              "id": "C",
+              "label": "Không, vẫn chỉ là trực giác"
+            },
+            {
+              "id": "D",
+              "label": "Mình vẫn chưa chắc"
+            }
+          ],
+          "default_next": {
+            "type": "question",
+            "id": "Q4.3_C"
+          }
+        },
+        "Q4.3_C": {
+          "id": "Q4.3_C",
+          "text": "Bạn có nghĩ một cảm nhận cá nhân cần phải có lời giải thích rõ ràng mới có giá trị không?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Có"
+            },
+            {
+              "id": "B",
+              "label": "Không"
+            },
+            {
+              "id": "C",
+              "label": "Tùy trường hợp"
+            }
+          ],
+          "default_next": {
+            "type": "question",
+            "id": "Q4.4_C"
+          }
+        },
+        "Q4.4_C": {
+          "id": "Q4.4_C",
+          "text": "Bạn có muốn thử nhìn bức tranh từ một góc nhìn hoàn toàn khác không?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Có",
+              "next": {
+                "type": "dynamic",
+                "rule": "open_unexplored_branch_list"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Không",
+              "next": {
+                "type": "question",
+                "id": "Q4.5"
+              }
+            }
+          ]
+        },
+        "Q4.2_D": {
+          "id": "Q4.2_D",
+          "text": "Những cảm nhận mới của bạn có mâu thuẫn với nhau không?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Có, nhưng mình thấy thú vị",
+              "next": {
+                "type": "question",
+                "id": "Q4.3_D"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Không, chúng bổ sung cho nhau",
+              "next": {
+                "type": "question",
+                "id": "Q4.3_D"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Có, mình chưa biết kết nối chúng thế nào",
+              "next": {
+                "type": "question",
+                "id": "Q4.3_D"
+              },
+              "ai_note": "Những cảm nhận không cần phải là một tổng thể hoàn chỉnh vì có rất nhiều góc nhìn khác nhau mà bạn có thể đồng cảm."
+            }
+          ]
+        },
+        "Q4.3_D": {
+          "id": "Q4.3_D",
+          "text": "Có cách diễn giải nào bạn muốn tiếp tục khám phá không?",
+          "input_type": "free_text",
+          "default_next": {
+            "type": "question",
+            "id": "Q4.5"
+          },
+          "purpose": "Free input"
+        },
+        "Q4.2_E": {
+          "id": "Q4.2_E",
+          "text": "Điều gì khiến bạn chưa muốn đưa ra kết luận?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Mình chưa quan sát đủ"
+            },
+            {
+              "id": "B",
+              "label": "Có nhiều cách hiểu khác nhau"
+            },
+            {
+              "id": "C",
+              "label": "Mình không nghĩ cần có kết luận"
+            },
+            {
+              "id": "D",
+              "label": "Một lý do khác"
+            }
+          ],
+          "default_next": {
+            "type": "question",
+            "id": "Q4.3_E"
+          }
+        },
+        "Q4.3_E": {
+          "id": "Q4.3_E",
+          "text": "Bạn muốn quay lại khám phá phần nào?",
+          "input_type": "choice_with_free_input",
+          "options": [
+            {
+              "id": "A",
+              "label": "Gương mặt",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2A"
+              }
+            },
+            {
+              "id": "B",
+              "label": "Đôi bàn tay và tư thế",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2B"
+              }
+            },
+            {
+              "id": "C",
+              "label": "Trang phục",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2C"
+              }
+            },
+            {
+              "id": "D",
+              "label": "Phong cảnh",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2D"
+              }
+            },
+            {
+              "id": "E",
+              "label": "Bố cục",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_2E"
+              }
+            },
+            {
+              "id": "F",
+              "label": "Một chủ đề lịch sử",
+              "next": {
+                "type": "branch",
+                "id": "BRANCH_3D"
+              }
+            }
+          ],
+          "max_options_exception": true,
+          "default_next": {
+            "type": "question",
+            "id": "Q4.5"
+          }
+        },
+        "Q4.5": {
+          "id": "Q4.5",
+          "text": "Nếu có một người chưa từng nhìn thấy bức tranh này, bạn sẽ muốn họ chú ý đến điều gì đầu tiên?",
+          "input_type": "free_text",
+          "default_next": {
+            "type": "end",
+            "id": "AUTO_ASSESSMENT"
+          },
+          "purpose": "Free input"
+        }
+      },
+      "revisit_rule": "Sau khi người dùng hoàn thành nhánh được quay lại (revisit), đưa họ về STAGE_4 (Q4.5 nếu đã trả lời Q4.1)."
+    }
+  },
+  "end_nodes": {
+    "AUTO_ASSESSMENT": {
+      "id": "AUTO_ASSESSMENT",
+      "trigger": "Khi người dùng hoàn thành Q4.5 hoặc kết thúc bất kỳ lúc nào.",
+      "status": "draft",
+      "added_by_converter": true,
+      "description": "Kịch bản gốc chỉ ghi 'đánh giá tự động'. Đề xuất: AI tóm tắt hành trình khám phá dựa trên state, KHÔNG kết luận thay người dùng.",
+      "output_fields": [
+        "initial_impression: ấn tượng ban đầu (Q1)",
+        "explored_details: các chi tiết đã khám phá (selected_details)",
+        "interpretations: các cách diễn giải người dùng đã đưa ra",
+        "impression_change: thay đổi so với ấn tượng đầu (Q4.1)",
+        "contexts_viewed: các context đã xem (C1-C8)",
+        "closing_note: lời kết ngắn, mở, mời người dùng quay lại khám phá thêm"
+      ]
+    }
+  }
+}
