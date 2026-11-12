@@ -1,2 +1,9 @@
 -r requirements.txt
 flet[all]==1.0.5
+
+# Chatbot gọi LLM (chỉ để chạy thử trên máy, cần key trong .env).
+# Không đưa vào requirements.txt: key không được nhúng vào app/web,
+# nên bản đóng gói luôn chạy chế độ từ khoá offline và không cần các thư viện này.
+google-genai
+openai
+python-dotenv

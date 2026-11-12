@@ -4,32 +4,26 @@ from __future__ import annotations
 import flet as ft
 
 from ..app import QuizState
-from ..data import FEELINGS, NEXT_STORY, PAINTINGS
+from ..data import DEFAULT_ID, FEELINGS, NEXT_STORY, PAINTINGS
 from ..theme import (BEIGE, BORDER, GOLD, GREEN, GREEN_BG, GREEN_INK, INK, MUTED, PRIMARY, RADIUS,
                      WHITE)
 from ..ui import (H, T, V, body, bottom_nav, card, divider, icon, kicker, painting_strip,
                   primary_button, screen, top_bar)
 from .quiz import feelings_row
 
-TAKEAWAYS = {
-    "arnolfini": [
-        "Gương phản chiếu hai người ở phía cửa; một người có thể là van Eyck. Đó là giả thuyết, "
-        "không phải bằng chứng xác định danh tính.",
-        "Cách diễn giải về “hợp đồng hôn nhân” từng được đề xuất, nhưng không xác nhận đây là "
-        "cảnh lễ cưới hay giấy tờ pháp lý.",
-    ],
-}
+# Điều rút ra riêng cho từng tranh (id -> các đoạn); tranh không có thì dùng p.story.
+TAKEAWAYS: dict[str, list[str]] = {}
 
 
-def build(app, q, pid: str = "arnolfini") -> ft.View:
-    p = PAINTINGS.get(pid) or PAINTINGS["arnolfini"]
+def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
+    p = PAINTINGS.get(pid) or PAINTINGS[DEFAULT_ID]
     if q.get("demo") == "1":
         app.state.quizzes[p.id] = QuizState(answers={0: 0, 1: 1}, current=1, phase="graded",
                                             feeling=3)
     st = app.state.quiz(p.id)
     n = len(p.quiz)
     score = sum(1 for i, qq in enumerate(p.quiz) if st.answers.get(i) == qq.correct)
-    nxt = PAINTINGS[NEXT_STORY.get(p.id, "madonna-pinks")]
+    nxt = PAINTINGS.get(NEXT_STORY.get(p.id, ""))   # None khi chưa có tranh tiếp theo
     cw = app.content_width
 
     badge = "Thám tử thị giác" if n and score == n else "Người quan sát chậm"
@@ -57,11 +51,12 @@ def build(app, q, pid: str = "arnolfini") -> ft.View:
                          alignment=ft.Alignment.CENTER),
             H(12),
             ft.Column([T(badge, 21, serif=True, ls=-0.3), V(4),
-                       T("Bạn đã hoàn thành hai câu hỏi" if n == 2 else "Bạn đã hoàn thành phần quiz",
-                         11, 400, MUTED)], spacing=0, tight=True, expand=True),
+                       T("Bạn đã hoàn thành hai câu hỏi" if n == 2 else
+                         "Bạn đã hoàn thành phần quiz" if n else
+                         "Bạn đã hoàn thành cuộc trò chuyện", 11, 400, MUTED)],
+                      spacing=0, tight=True, expand=True),
         ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        V(17),
-        score_box,
+        *([V(17), score_box] if n else []),          # tranh chưa có quiz: không hiện ô điểm
         V(13),
         T("Điều bạn vừa nhận ra", 13, 600, INK),
         *paras,
@@ -77,17 +72,37 @@ def build(app, q, pid: str = "arnolfini") -> ft.View:
         note_block = [V(14), ft.Container(T(f"“{st.note.strip()}”", 13, 400, INK, italic=True),
                                           bgcolor=BEIGE, border_radius=RADIUS, padding=14)]
 
-    img_w = 190
-    next_card = card(ft.Column([
-        ft.Container(ft.Image(src=nxt.image, width=img_w, height=img_w / nxt.aspect, fit=ft.BoxFit.COVER),
-                     bgcolor=BEIGE, alignment=ft.Alignment.CENTER,
-                     padding=ft.Padding.symmetric(vertical=17)),
-        ft.Container(ft.Column([
-            T(nxt.title, 21, serif=True, ls=-0.3), V(8),
-            T(f"{nxt.artist} · {nxt.year}", 11, 400, MUTED), V(6),
-            T(nxt.teaser, 11, 400, MUTED),
-        ], spacing=0, tight=True), padding=ft.Padding.only(left=12, right=12, top=9, bottom=12.5)),
-    ], spacing=0, tight=True), on_click=lambda e: app.go(f"/painting/{nxt.id}"))
+    next_block: list[ft.Control] = []
+    if nxt is not None:
+        img_w = 190
+        next_card = card(ft.Column([
+            ft.Container(ft.Image(src=nxt.image, width=img_w, height=img_w / nxt.aspect,
+                                  fit=ft.BoxFit.COVER),
+                         bgcolor=BEIGE, alignment=ft.Alignment.CENTER,
+                         padding=ft.Padding.symmetric(vertical=17)),
+            ft.Container(ft.Column([
+                T(nxt.title, 21, serif=True, ls=-0.3), V(8),
+                T(f"{nxt.artist} · {nxt.year}", 11, 400, MUTED), V(6),
+                T(nxt.teaser, 11, 400, MUTED),
+            ], spacing=0, tight=True), padding=ft.Padding.only(left=12, right=12, top=9, bottom=12.5)),
+        ], spacing=0, tight=True), on_click=lambda e: app.go(f"/painting/{nxt.id}"))
+        next_block = [
+            V(25), divider(), V(20),
+            T("Một câu chuyện tiếp theo", 23, serif=True),
+            V(15.5),
+            next_card,
+            V(12.5),
+            primary_button("Khám phá bức tiếp theo", lambda e: app.go(f"/painting/{nxt.id}"), pill=True),
+            V(11),
+            ft.Container(T(f"Thông tin & ảnh: {nxt.museum} ↗", 11, 400, MUTED),
+                         on_click=lambda e: app.open_url(nxt.url)),
+        ]
+    else:
+        next_block = [
+            V(25),
+            primary_button("Trò chuyện thêm với AURA", lambda e: app.go(f"/chat/{p.id}"), pill=True,
+                           leading="message-circle"),
+        ]
 
     content = body([
         V(23.5),
@@ -110,17 +125,7 @@ def build(app, q, pid: str = "arnolfini") -> ft.View:
         V(12),
         T("Bạn tự chọn theo cảm nhận lúc này; phần này không tính vào kết quả quiz. Cảm nhận không "
           "có đúng hay sai.", 11, 400, MUTED),
-        V(25),
-        divider(),
-        V(20),
-        T("Một câu chuyện tiếp theo", 23, serif=True),
-        V(15.5),
-        next_card,
-        V(12.5),
-        primary_button("Khám phá bức tiếp theo", lambda e: app.go(f"/painting/{nxt.id}"), pill=True),
-        V(11),
-        ft.Container(T(f"Thông tin & ảnh: {nxt.museum} ↗", 11, 400, MUTED),
-                     on_click=lambda e: app.open_url(nxt.url)),
+        *next_block,
     ], bottom=25)
     return screen(f"/result/{p.id}", content,
                   top=top_bar("Kết quả & cảm nhận", on_back=app.back_handler),

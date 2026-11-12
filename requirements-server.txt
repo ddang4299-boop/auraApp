@@ -1,0 +1,8 @@
+# Thư viện cho bản chạy trên máy chủ (Render): app web + AI.
+# Key AI KHÔNG nằm trong code: đặt trong phần Environment của Render (xem render.yaml, DEPLOY.md).
+flet==1.0.5
+flet-web==1.0.5
+httpx>=0.27
+google-genai
+openai
+python-dotenv

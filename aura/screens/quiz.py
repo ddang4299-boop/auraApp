@@ -6,7 +6,7 @@ import math
 import flet as ft
 
 from ..app import QuizState
-from ..data import FEELINGS, PAINTINGS, Painting, QuizQuestion
+from ..data import DEFAULT_ID, FEELINGS, PAINTINGS, Painting, QuizQuestion
 from ..theme import (BEIGE, BORDER, GOLD, GREEN, GREEN_BG, GREEN_INK, INK, MUTED, PRIMARY, RADIUS,
                      RED, SURFACE, TINT, WHITE, WHY_BG, WHY_BORDER, WHY_INK)
 from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, icon, kicker,
@@ -148,17 +148,14 @@ def _question_block(app, p: Painting, st: QuizState, i: int, qq: QuizQuestion, n
         hint = "Chưa đúng lần này. Cùng nhìn kỹ chiếc gương nhé." if qq.why_crop else \
             "Chưa đúng lần này. Cùng đọc lại gợi ý nhé."
         out += [V(13.5), T(hint, 12, 400, PRIMARY)]
-        extra = ["Gương không chứng minh danh tính họa sĩ. Cách đọc bức tranh như một “hợp đồng "
-                 "hôn nhân” cũng là giả thuyết lịch sử, không phải tình trạng pháp lý đã được xác "
-                 "nhận."] if p.id == "arnolfini" and i == 0 else []
-        out += [V(13.5), _why(app, p, qq, extra)]
+        out += [V(13.5), _why(app, p, qq)]
     elif graded:
         out += [V(13), _why(app, p, qq)]
     return out
 
 
-def build(app, q, pid: str = "arnolfini") -> ft.View:
-    p = PAINTINGS.get(pid) or PAINTINGS["arnolfini"]
+def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
+    p = PAINTINGS.get(pid) or PAINTINGS[DEFAULT_ID]
     demo = q.get("demo")
     if demo == "graded":
         app.state.quizzes[p.id] = QuizState(answers={0: 0, 1: 1}, current=1, phase="graded",
@@ -257,9 +254,7 @@ def build(app, q, pid: str = "arnolfini") -> ft.View:
                       text_link(nxt, skip)]
         elif st.phase == "graded":
             items += [V(23.5),
-                      ft.Container(T(f"Dựa trên cuộc trò chuyện và {p.museum} · The Arnolfini Portrait ↗"
-                                     if p.id == "arnolfini" else
-                                     f"Dựa trên cuộc trò chuyện và {p.museum} ↗", 10, 400, MUTED),
+                      ft.Container(T(f"Dựa trên cuộc trò chuyện và {p.museum} ↗", 10, 400, MUTED),
                                    on_click=lambda e: app.open_url(p.url)),
                       V(26), divider(), V(21),
                       kicker("02 · Cảm nhận của riêng bạn"), V(6.5),

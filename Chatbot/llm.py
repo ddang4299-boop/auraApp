@@ -6,6 +6,7 @@ make_llm() trả None nếu thiếu key -> Engine tự chạy chế độ keywor
 from __future__ import annotations
 
 import os
+import re
 import time
 from typing import Callable, Optional
 
@@ -23,6 +24,43 @@ def _is_timeout(e: Exception) -> bool:
     return "timeout" in (type(e).__name__ + str(e)).lower() or "timed out" in str(e).lower()
 
 
+def _is_bad_config(e: Exception) -> bool:
+    """Lỗi 400 = model không nhận kiểu cấu hình này (vd thinking_budget) -> đáng thử kiểu khác.
+    Các lỗi còn lại (429 hết lượt, 503/504 quá tải, mạng, timeout) thử kiểu khác cũng vô ích."""
+    s = str(e)
+    return "400" in s or "INVALID_ARGUMENT" in s
+
+
+class CircuitBreaker:
+    """Bọc 1 LLM. Khi nó vừa quá tải / hết lượt / quá giờ thì "nghỉ" một lúc:
+    trong lúc nghỉ, mọi lần gọi báo lỗi NGAY (0 giây) để engine dùng chế độ từ khoá offline,
+    thay vì lượt nào người dùng cũng phải chờ hết LLM_TIMEOUT rồi mới được trả lời."""
+
+    def __init__(self, llm, cooldown: float = 30.0):
+        self.llm, self.cooldown = llm, cooldown
+        self.label = getattr(llm, "label", type(llm).__name__)
+        self.until = 0.0                      # thời điểm hết nghỉ
+
+    def __call__(self, system: str, user: str, max_tokens: int = 450) -> str:
+        wait = self.until - time.time()
+        if wait > 0:
+            raise RuntimeError(f"{self.label} đang tạm nghỉ {wait:.0f}s sau lỗi quá tải")
+        try:
+            return self.llm(system, user, max_tokens)
+        except Exception as e:
+            if not _is_bad_config(e):
+                pause = self._pause_for(e)
+                self.until = time.time() + pause
+                how_long = f"{pause / 3600:.1f} giờ" if pause >= 3600 else f"{pause:.0f}s"
+                print(f"[llm] {self.label} lỗi ({str(e)[:60]}...) -> tạm dùng offline {how_long}")
+            raise
+
+    def _pause_for(self, e: Exception) -> float:
+        # 429: Google báo phải chờ bao lâu (hết lượt/phút: vài chục giây; hết lượt/ngày: nhiều giờ)
+        m = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+)", str(e))
+        return float(m.group(1)) if m else self.cooldown
+
+
 class GeminiLLM:
     """Google AI Studio (free tier). pip install google-genai"""
 
@@ -35,27 +73,31 @@ class GeminiLLM:
             self.client = genai.Client(api_key=api_key)
         self.model, self.temperature = model, temperature
         self.label = f"gemini/{model}"
+        self._variant = 0          # nhớ kiểu cấu hình đã chạy được, lần sau dùng luôn
 
     def __call__(self, system: str, user: str, max_tokens: int = 450) -> str:
         from google.genai import types
         base = dict(system_instruction=system, temperature=self.temperature,
                     max_output_tokens=max_tokens + 1500)   # model "suy nghĩ" tính vào hạn mức: luôn chừa chỗ dư
+        if "JSON" in system:       # prompt định tuyến: bắt model trả JSON chuẩn -> khỏi phải gọi lại vì lỗi đọc
+            base["response_mime_type"] = "application/json"
         variants = (  # giảm thinking nếu được; SDK/model không hỗ trợ kiểu nào thì thử kiểu kế
             lambda: dict(base, thinking_config=types.ThinkingConfig(thinking_budget=0)),
             lambda: dict(base, thinking_config=types.ThinkingConfig(thinking_level="low")),
             lambda: dict(base),
         )
         last = None
-        for make in variants:
+        for i in range(self._variant, len(variants)):
             try:
-                cfg = types.GenerateContentConfig(**make())
+                cfg = types.GenerateContentConfig(**variants[i]())
                 r = self.client.models.generate_content(model=self.model, contents=user, config=cfg)
                 if (r.text or "").strip():
+                    self._variant = i
                     return r.text
                 last = RuntimeError("Gemini trả về chuỗi rỗng (hết token suy nghĩ hoặc bị bộ lọc chặn)")
             except Exception as e:
                 last = e
-                if _is_timeout(e):
+                if not _is_bad_config(e):   # quá tải / hết lượt / quá giờ: báo lỗi ngay, không thử tiếp
                     break
         raise last
 
@@ -85,7 +127,7 @@ class OpenAICompatLLM:
                 last = RuntimeError("Model trả về chuỗi rỗng")
             except Exception as e:
                 last = e
-                if _is_timeout(e):
+                if not _is_bad_config(e):
                     break
         raise last
 
@@ -156,7 +198,17 @@ def make_llm() -> Optional[LLMFn]:
     """LLM_PROVIDER = provider chính, LLM_FALLBACK = provider dự phòng (có thể để trống).
     Provider nào thiếu key thì bị bỏ qua; không còn cái nào -> None (engine chạy keyword offline)."""
     names = [os.getenv("LLM_PROVIDER", "gemini")] + [os.getenv("LLM_FALLBACK", "")]
-    chain = [m for m in (_build(n) for n in names if n.strip()) if m]
+    chain = []
+    for n in names:
+        if not n.strip():
+            continue
+        try:
+            m = _build(n)
+        except (ImportError, ValueError) as e:   # thiếu thư viện / cấu hình sai: bỏ qua provider này
+            print(f"[llm] Bỏ qua provider '{n}': {e}")
+            continue
+        if m:
+            chain.append(CircuitBreaker(m))
     if not chain:
         return None
     return chain[0] if len(chain) == 1 else FallbackLLM(chain)

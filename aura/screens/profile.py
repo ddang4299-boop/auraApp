@@ -15,7 +15,8 @@ ABOUT_APP = ("AURA giúp bạn cảm nhận tranh Phục Hưng bằng cách nhì
              "nhìn thấy khỏi điều suy đoán, rồi đối chiếu với nguồn của bảo tàng.")
 SOCRATIC = ("Mỗi cuộc trò chuyện đi qua bốn chặng: Ấn tượng đầu → Tách chi tiết → Đối thoại → Mở "
             "rộng. AURA hỏi trước, gợi ý sau và luôn ghi rõ nguồn khi đưa ra thông tin.")
-SOURCES = ("Hình ảnh và thông tin tác phẩm: National Gallery, London (nationalgallery.org.uk). "
+SOURCES = ("Thông tin tác phẩm: Bảo tàng Louvre (collections.louvre.fr). Ảnh tranh: Wikimedia "
+           "Commons (phạm vi công cộng). "
            "Icon: Lucide (ISC). Phông chữ: Inter, Lora, Montserrat (SIL Open Font License).")
 TERMS = ("AURA chỉ dùng thông tin tài khoản (tên, email, số điện thoại, ảnh đại diện) để đăng "
          "nhập và hiển thị hồ sơ của bạn. Cảm nhận bạn chia sẻ được lưu trên thiết bị này.")

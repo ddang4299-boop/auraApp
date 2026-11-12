@@ -14,7 +14,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from .data import HANDS_CROP, Painting
+from .data import Painting
 
 STAGES = ["Ấn tượng đầu", "Tách chi tiết", "Đối thoại", "Mở rộng"]
 
@@ -67,71 +67,6 @@ class SocraticEngine(Protocol):
     async def reply(self, painting: Painting, history: list[Message], user_text: str) -> AuraTurn: ...
 
 
-# ---------------------------------------------------------------------------
-# Kịch bản mẫu cho "Chân dung vợ chồng Arnolfini" (đúng như bản thiết kế)
-# ---------------------------------------------------------------------------
-
-_ARNOLFINI_SCRIPT: list[AuraTurn] = [
-    AuraTurn(
-        ["Chào bạn! Trước khi tìm hiểu xem hai người này là ai, chúng ta hãy thử nhìn vào cách "
-         "họ đứng cạnh nhau nhé. Hãy nhìn vào bàn tay họ đang nắm ở chính giữa bức tranh và nét "
-         "mặt của cả hai. Theo cảm nhận của bạn, bầu không khí giữa cặp đôi này đang như thế nào?"],
-        [Choice("Rất trang trọng, hơi căng thẳng 😐"), Choice("Ấm áp, bình yên 🌿"),
-         Choice("Kỳ lạ, không giống đang yêu nhau 🤔")],
-        stage=0,
-    ),
-    AuraTurn(
-        ["Bạn nhận xét rất tinh tế! Họ đứng thẳng lưng, ánh mắt trầm tĩnh như đang thực hiện một "
-         "nghi lễ lớn chứ không phải buổi hẹn hò thường ngày. Giờ bạn hãy nhìn sang người phụ nữ "
-         "mặc váy xanh lá nhé. Cách cô ấy đặt tay lên phần bụng nhô cao khiến bạn liên tưởng đến "
-         "điều gì đầu tiên?"],
-        [Choice("Chắc chắn là đang mang thai 🤰"), Choice("Do chiếc váy bị phồng lên 👗")],
-        stage=1, attachment=DetailAttachment("hands", HANDS_CROP),
-    ),
-    AuraTurn(
-        ["Mình thử tách điều nhìn thấy khỏi điều suy đoán nhé: bạn thấy bàn tay đặt trên bụng, "
-         "hay thấy bàn tay đang gom những nếp vải?"],
-        [Choice("Nhìn rõ bàn tay đang gom vải 👗"), Choice("Còn nghi ngờ, cần nhìn kỹ hơn 🤔")],
-        stage=2,
-    ),
-    AuraTurn(
-        ["Theo National Gallery, phần nhô lên là lớp váy rộng được người phụ nữ nâng trước người, "
-         "một cách giữ váy thời đó. Vì vậy, chỉ chi tiết này chưa đủ để kết luận cô ấy mang thai. [1]",
-         "Giờ bạn hãy nhìn lại cách họ đứng và trang phục: điều đó có thay đổi cách bạn hiểu sự "
-         "trang trọng trong bức tranh không?"],
-        [Choice("Có, trang phục và tư thế có thể là lý do chính"),
-         Choice("Vẫn cảm thấy có gì đó trang trọng, nhưng không chắc là do mang thai")],
-        stage=2,
-    ),
-    AuraTurn(
-        ["Nếu nhìn lại từ đầu, bạn sẽ mô tả điều gì trước khi tìm một lời giải thích?"],
-        [Choice("Tay, mặt, vải và tư thế nghiêm trang"),
-         Choice("Nhìn chi tiết trước, sau đó kiểm tra nguồn")],
-        stage=3,
-    ),
-    AuraTurn(
-        ["Bạn đã tách được điều mình nhìn thấy với điều mình suy đoán. Bước tiếp theo là thử quiz "
-         "và chia sẻ cảm nhận của mình."],
-        stage=3, done=True,
-        summary=Summary("Bạn vừa khám phá",
-                        "Bạn đã tách chi tiết tay, mặt, vải và tư thế nghiêm trang trong Chân dung "
-                        "vợ chồng Arnolfini, rồi kiểm tra nguồn để hiểu thêm về lớp váy rộng được "
-                        "người phụ nữ nâng trước người."),
-        source="Nguồn: National Gallery, London · Xem nguồn ↗",
-    ),
-]
-
-# Câu trả lời mẫu dùng để phát lại toàn bộ hội thoại (bản demo trong thiết kế).
-ARNOLFINI_DEMO_REPLIES: list[str | int] = [
-    "Trông họ rất trang trọng, nghiêm túc quá mức chứ không thấy cười đùa tình cảm gì cả.",
-    "Nhìn giống hệt như cô ấy đang mang thai vậy, nên chắc họ mới đứng nghiêm trang thế.",
-    "Nhìn lại thì có vẻ cô ấy đang gom vải váy lên chứ không chắc là bụng phồng.",
-    "Có, mình nghĩ sự trang trọng có thể đến từ cách họ đứng thẳng và trang phục phức tạp hơn "
-    "là một sự kiện riêng tư.",
-    1,   # chạm vào gợi ý thứ 2
-]
-
-
 def _generic_script(p: Painting) -> list[AuraTurn]:
     """Kịch bản Socrates chung dựng từ các 'điểm nhìn' của tranh."""
     pts = p.look_points
@@ -157,18 +92,19 @@ def _generic_script(p: Painting) -> list[AuraTurn]:
          "sẻ cảm nhận của mình nhé."], stage=3, done=True,
         summary=Summary("Bạn vừa khám phá", f"Bạn đã quan sát kỹ “{p.title}” của {p.artist} và "
                         "kiểm tra thông tin từ bảo tàng.", action="Chia sẻ cảm nhận"),
-        source="Nguồn: National Gallery, London · Xem nguồn ↗"))
+        source=f"Nguồn: {p.museum} · Xem nguồn ↗" if p.museum else None))
     return turns
 
 
 class ScriptedSocraticEngine:
-    """Engine mẫu chạy theo kịch bản. Thay bằng engine thật của nhóm bạn."""
+    """Engine dự phòng: kịch bản chung dựng từ dữ liệu tranh, dùng khi tranh chưa có
+    kịch bản JSON trong Chatbot/scripts/."""
 
     def __init__(self, think_delay: float = 0.9):
         self.think_delay = think_delay
 
     def _script(self, p: Painting) -> list[AuraTurn]:
-        return _ARNOLFINI_SCRIPT if p.id == "arnolfini" else _generic_script(p)
+        return _generic_script(p)
 
     async def start(self, painting: Painting) -> AuraTurn:
         return self._script(painting)[0]

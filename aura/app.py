@@ -35,6 +35,7 @@ class ChatState:
     messages: list[Message] = field(default_factory=list)
     stage: int = 0
     thinking: bool = False
+    starting: bool = False             # đang lấy lời chào đầu (tránh lấy 2 lần khi màn được dựng lại)
     picked: dict[int, int] = field(default_factory=dict)     # index tin nhắn -> gợi ý đã chọn
 
 
@@ -42,7 +43,7 @@ class ChatState:
 class AppState:
     phone: str = ""
     profile: Profile | None = None
-    saved: set[str] = field(default_factory=lambda: {"arnolfini"})
+    saved: set[str] = field(default_factory=set)
     quizzes: dict[str, QuizState] = field(default_factory=dict)
     chats: dict[str, ChatState] = field(default_factory=dict)
 
@@ -66,6 +67,9 @@ ROUTES = [
     ("/quiz/", "quiz", "build"),
     ("/result/", "result", "build"),
     ("/profile", "profile", "build"),
+    ("/timeline", "topics", "timeline"),
+    ("/concepts", "topics", "concepts"),
+    ("/topic/", "topics", "build"),
     ("/", "auth", "welcome"),
 ]
 
@@ -83,10 +87,19 @@ class AuraApp:
         page.padding = 0
         page.spacing = 0
         page.theme_mode = ft.ThemeMode.LIGHT
+        # Chuyển màn kiểu iPhone (trượt ngang, vuốt mép trái để quay lại) trên mọi nền tảng.
+        slide = ft.PageTransitionTheme.CUPERTINO
         page.theme = ft.Theme(font_family="Inter", color_scheme_seed=PRIMARY,
-                              scaffold_bgcolor=BG)
+                              scaffold_bgcolor=BG,
+                              page_transitions=ft.PageTransitionsTheme(
+                                  android=slide, ios=slide, macos=slide, windows=slide,
+                                  linux=slide))
         page.on_route_change = self._on_route_change
         page.on_view_pop = self._on_view_pop
+        # Lúc mới mở, trình duyệt/điện thoại có thể báo bề rộng tạm (vd 164px) rồi mới báo bề rộng
+        # thật: khi bề rộng đổi thì dựng lại các màn để ảnh/lưới tính theo đúng khổ màn hình.
+        self._laid_out_width = self.width
+        page.on_resize = self._on_resize
         # Dịch vụ của Flet: lưu trữ cục bộ và mở trình duyệt/URL.
         self.prefs = ft.SharedPreferences()
         self.launcher = ft.UrlLauncher()
@@ -152,6 +165,15 @@ class AuraApp:
         if views:
             views[-1] = self._build(views[-1].route)
             self.page.update()
+
+    def _on_resize(self, e) -> None:
+        if abs(self.width - self._laid_out_width) < 1:     # chỉ đổi chiều cao (vd bật bàn phím)
+            return
+        self._laid_out_width = self.width
+        views = self.page.views
+        for i, v in enumerate(list(views)):
+            views[i] = self._build(v.route)
+        self.page.update()
 
     def _on_route_change(self, e) -> None:
         route = self.page.route or "/"

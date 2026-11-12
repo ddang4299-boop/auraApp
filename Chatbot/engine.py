@@ -14,8 +14,11 @@ CHIP GỢI Ý = CÂU HỎI CỦA USER ĐẶT CHO BOT (giọng người dùng, vd
   bấm chip = chip thay cho tin nhắn user gõ; bot đọc và đáp lại theo kịch bản (hỏi ngược/hiện context), không giảng.
   Nguồn: node["suggested_questions"] trong json > <tranh>.hints.json (build_hints) > mẫu chung theo chặng.
 
-Không nhắc lại quyết định/câu trả lời của user: engine đẩy thẳng câu hỏi kế tiếp.
-Lời đệm ngắn duy nhất: khi user nói "không biết" (động viên, không lặp lại gì).
+PHẢN HỒI (result["feedback"]): trước câu hỏi kế tiếp, bot đáp lại đúng điều user vừa trả lời.
+  Bấm lựa chọn -> option["feedback"] viết sẵn trong json. Gõ tự do -> AI viết (dựa trên "insight" của câu),
+  không có AI -> nhắc lại ý user + feedback của lựa chọn gần nghĩa nhất / question["feedback"].
+Khi user đã nói sẵn đáp án của câu mở nhánh (vd "đôi mắt"), engine bỏ qua câu đó (_auto_pick).
+Lời đệm khi user nói "không biết": động viên, không lặp lại gì.
 
 Engine STATELESS: step(state, input) -> kết quả + state mới (JSON). App lưu state tuỳ ý.
 """
@@ -36,12 +39,25 @@ FORBIDDEN = re.compile(
 )
 EXIT_KW = ["thoát", "kết thúc", "dừng lại", "dừng nhé", "mình dừng", "không muốn tiếp"]
 UNSURE_KW = ["không biết", "không chắc", "chưa chắc", "không rõ", "khó nói", "chịu"]
-QUESTION_RE = re.compile(r"\?|là gì|là ai|vì sao|khi nào|tại sao|sao lại")
+# Câu hỏi / lời đề nghị cung cấp thông tin (vd "mình muốn biết về bối cảnh...")
+QUESTION_RE = re.compile(r"\?|là gì|là ai|vì sao|khi nào|tại sao|sao lại|muốn biết|muốn tìm hiểu|"
+                         r"muốn khám phá về|kể cho|cho mình biết|cho tôi biết|giải thích")
 LIMIT_MSG = "Phần này mình chưa có thông tin đáng tin cậy để trả lời, nên mình xin không suy đoán."
 UNSURE_ACKS = ["Không sao, bạn cứ nói điều đầu tiên bạn nhận ra nhé.",
                "Không sao, bạn thử chọn một câu gợi ý bên dưới cũng được."]
 OPENING_TEXT = "Bạn mong muốn tìm hiểu gì về bức tranh này?"
 NO_UNSURE = {EXIT_Q, "BRIDGE", "BRANCH_LIST"}
+
+# Từ "rỗng nghĩa" khi so khớp chữ người dùng gõ với nhãn lựa chọn (vd "Đôi mắt" ~ "ánh mắt")
+STOP = set("""và của giữa các sự trên cô ấy những một hai cách phía sau toàn bộ là có không mình tôi bạn
+điều gì đó này trong với cho được đang rất hơi khá chỉ nhất thì mà nhưng hay hoặc như theo về từ ra lên
+đôi dãy cây dòng con chiếc nào vẫn cũng đã sẽ nó họ em tớ ánh khác khám phá tìm hiểu muốn xem
+biết thêm nữa""".split())
+SYNONYM = {"khuôn": "gương", "môi": "miệng", "khung": "phong"}   # khuôn mặt~gương mặt, khung cảnh~phong cảnh
+YES_RE = re.compile(r"^\s*(có|ừ|ừm|vâng|dạ có|đúng|yes|ok|okay|chắc chắn rồi)\b", re.I)
+NO_RE = re.compile(r"^\s*(không|ko|k|chẳng|chả|no)\b", re.I)
+UNSURE_RE = re.compile(r"^\s*(không chắc|chưa chắc|không rõ|chưa rõ)", re.I)
+FIRST_PERSON = re.compile(r"\b(tôi|tớ|mình|tui|t)\b", re.I)
 
 # Chip mẫu (giọng USER hỏi bot) khi chưa có gợi ý riêng cho câu đó
 GENERIC_PROMPTS = {
@@ -84,8 +100,10 @@ Schema đầu ra (mọi khóa đều phải có):
  "wants_alternative": bool (chỉ khi extra_tasks có wants_alternative),
  "context_trigger_hit": bool (chỉ khi extra_tasks có context_trigger_hit),
  "depth": 0 chưa nêu gì | 1 chỉ nhận thấy/mô tả | 2 tự diễn giải có lý do | 3 kết nối bản thân/thông điệp,
- "bridge": "1 câu hỏi ngắn nối context vừa hiện với điều họ đã quan sát; chỉ khi asks_context không rỗng và answers_current=false, ngược lại chuỗi rỗng"
-}"""
+ "bridge": "1 câu hỏi ngắn nối context vừa hiện với điều họ đã quan sát; chỉ khi asks_context không rỗng và answers_current=false, ngược lại chuỗi rỗng",
+ "feedback": "Chỉ khi answers_current=true và họ nêu ý kiến: 1-2 câu tiếng Việt (xưng 'mình', gọi 'bạn') PHẢN HỒI ĐÚNG ĐIỀU HỌ VỪA NÓI: gọi tên cụ thể điều họ nhận ra, chỉ ra điểm tinh ý hoặc cơ sở trong nhận xét đó. Chỉ được dùng thông tin về tranh có trong current_question.insight; không đặt câu hỏi, không có dấu '?', không khen sáo rỗng, không phán đúng/sai. Các trường hợp khác: chuỗi rỗng"
+}
+Ngoại lệ duy nhất cho quy tắc "không cung cấp kiến thức": trường feedback được dùng thông tin trong current_question.insight."""
 
 CLOSING_SYSTEM = """Viết lời kết 2 câu bằng tiếng Việt cho người vừa khám phá bức tranh. Chỉ nhắc lại điều chính người dùng đã nói
 (trích từ dữ liệu), mời họ quay lại khám phá thêm. KHÔNG kết luận thay họ, KHÔNG nói kiến thức về tranh, KHÔNG có dấu "?",
@@ -195,12 +213,13 @@ class Engine:
                 return self._pack(s, "", contexts, sig=sig)
 
         self._record(s, node, qn, opt, text, sig)
+        feedback = self._feedback(node, qn, opt, text, sig)
         nav, chosen = self._route(s, node, qn, opt, sig)
         new_node = self._resolve(s, nav, node, sig, chosen)
         if new_node["type"] == "end":
-            return self._finish(s)
+            return self._finish(s, feedback)
         s["node"] = new_node
-        return self._pack(s, "", contexts, sig=sig)
+        return self._pack(s, "", contexts, sig=sig, feedback=feedback)
 
     def assessment(self, s: dict) -> dict:
         a = s["answers"]
@@ -313,7 +332,7 @@ class Engine:
                 return o, o["label"]
         return None, text
 
-    def _pack(self, s: dict, ack: str, contexts: list, sig: Optional[dict] = None) -> dict:
+    def _pack(self, s: dict, ack: str, contexts: list, sig: Optional[dict] = None, feedback: str = "") -> dict:
         node = s["node"]
         qn = self._view(node)
         if node["type"] == "question":
@@ -323,10 +342,10 @@ class Engine:
             "id": node["id"], "text": shown, "input_type": "free_text", "allow_free_input": True,
             "suggestions": self._chips(s, node),
         }
-        s["history"].append({"role": "assistant", "content": (ack + " " + shown).strip()})
+        s["history"].append({"role": "assistant", "content": " ".join(x for x in (ack, feedback, shown) if x)})
         s["history"] = s["history"][-10:]
         return {
-            "state": s, "ack": ack, "contexts": contexts, "question": question,
+            "state": s, "ack": ack, "feedback": feedback, "contexts": contexts, "question": question,
             "stage": s["stage_idx"], "ended": s["ended"],
             "assessment": self.assessment(s) if s["ended"] else None,
             "detail": {"branch": s["last_branch"], "details": s["selected_details"][-3:]},
@@ -341,7 +360,7 @@ class Engine:
         return {"nearest_option_id": None, "answers_current": True, "uncertain": False, "wants_exit": False,
                 "detail_branch": None, "detail_tags": [], "color_light": False, "emotion_letter": None,
                 "asks_context": [], "asks_unknown": False, "conditional_hit": False, "wants_alternative": False,
-                "context_trigger_hit": False, "depth": 0, "bridge": ""}
+                "context_trigger_hit": False, "depth": 0, "bridge": "", "feedback": ""}
 
     def _interpret(self, s, node, qn, opt, text) -> dict:
         sig = None
@@ -365,7 +384,9 @@ class Engine:
             extra["emotion_letter"] = {o["id"]: o["label"] for o in self.q["Q1"][0]["options"] if o["id"] not in ("G", "H")}
         payload = {
             "current_question": {"id": node["id"], "text": qn["text"],
-                                 "options": [{"id": o["id"], "label": o["label"]} for o in qn.get("options", [])]},
+                                 "options": [{"id": o["id"], "label": o["label"]} for o in qn.get("options", [])],
+                                 "insight": " ".join(x for x in [qn.get("feedback", "")] +
+                                                     [o.get("feedback", "") for o in qn.get("options", [])] if x)},
             "user_input": text,
             "recent_turns": s["history"][-6:],
             "known": {"selected_details": s["selected_details"][-5:], "initial_impression": s["initial_impression"]},
@@ -376,7 +397,7 @@ class Engine:
         user = json.dumps(payload, ensure_ascii=False)
         for _ in range(2):
             try:
-                raw = self.llm(SYSTEM, user, 350)
+                raw = self.llm(SYSTEM, user, 500)
                 data = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
                 return self._clean(data, qn)
             except Exception:
@@ -404,6 +425,8 @@ class Engine:
         except (TypeError, ValueError):
             sig["depth"] = 0
         sig["bridge"] = str(data.get("bridge", "")).strip()
+        fb = str(data.get("feedback", "")).strip()
+        sig["feedback"] = fb if fb and "?" not in fb and len(fb) <= 320 and not FORBIDDEN.search(fb) else ""
         return sig
 
     def _derive_ctx_keywords(self) -> dict:
@@ -436,13 +459,8 @@ class Engine:
         t = text.lower()
         sig = self._blank_sig()
         if not opt:
-            words = set(re.findall(r"\w+", t))
-            best, score = None, 0
-            for o in qn.get("options", []):
-                sc = len(words & set(re.findall(r"\w+", o["label"].lower())))
-                if sc > score:
-                    best, score = o["id"], sc
-            sig["nearest_option_id"] = best
+            near = self._match_option(qn, text)
+            sig["nearest_option_id"] = near["id"] if near else None
             sig["wants_exit"] = any(k in t for k in EXIT_KW)
             sig["uncertain"] = any(k in t for k in UNSURE_KW)
             sig["asks_context"] = [c for c, kws in self.ctx_kw.items() if any(k in t for k in kws)]
@@ -463,6 +481,102 @@ class Engine:
             return None
         b, n = max(hits.items(), key=lambda kv: kv[1])
         return b if n else None
+
+    # ======================================================================
+    # PHẢN HỒI CHO CÂU TRẢ LỜI (feedback)
+    # ======================================================================
+    @staticmethod
+    def _content_words(s: str) -> list:
+        return [SYNONYM.get(w, w) for w in re.findall(r"\w+", s.lower()) if w not in STOP]
+
+    def _match_option(self, qn: dict, text: str) -> Optional[dict]:
+        """Lựa chọn mà câu người dùng GÕ nói tới (vd "đôi mắt cô ấy..." -> "Đôi mắt"), hoặc None.
+        Khớp khi >= 2/3 từ có nghĩa của nhãn xuất hiện trong câu và không có lựa chọn khác ngang điểm."""
+        opts = [o for o in qn.get("options", []) if "free input" not in o["label"].lower()]
+        if not opts or not text:
+            return None
+        labels = {o["id"]: o["label"].strip().lower() for o in opts}
+        # câu Có / Không / Không chắc
+        if UNSURE_RE.search(text):
+            hit = [o for o in opts if re.search(r"chắc|rõ|biết", labels[o["id"]])]
+            if hit:
+                return hit[0]
+        if NO_RE.search(text) and not UNSURE_RE.search(text):
+            hit = [o for o in opts if labels[o["id"]].startswith("không") and "chắc" not in labels[o["id"]]]
+            if len(hit) == 1:
+                return hit[0]
+        if YES_RE.search(text):
+            hit = [o for o in opts if labels[o["id"]].startswith("có")]
+            if len(hit) == 1:
+                return hit[0]
+        words = set(self._content_words(text))
+        best, best_key, tie = None, (0, 0.0), False
+        for o in opts:
+            if "khác" in labels[o["id"]]:            # lựa chọn "…khác" là lối thoát chung, không so khớp
+                continue
+            lab = self._content_words(o["label"])
+            if not lab:
+                continue
+            hit = sum(w in words for w in lab)
+            key = (hit, hit / len(lab))
+            if key > best_key:
+                best, best_key, tie = o, key, False
+            elif key == best_key and hit:
+                tie = True
+        hit, ratio = best_key
+        # khớp khi phủ >= 2/3 nhãn, hoặc trùng >= 2 từ có nghĩa (nhãn dài, vd "…bối cảnh lịch sử")
+        return best if best and not tie and (ratio >= 0.66 or hit >= 2) else None
+
+    @staticmethod
+    def _mirror(text: str) -> str:
+        """Nhắc lại ngắn ý người dùng vừa gõ, đổi ngôi tôi/mình -> bạn. Rỗng nếu câu quá dài/không hợp."""
+        t = re.sub(r"\s+", " ", text).strip().rstrip("?.!…,; ")
+        if not t or len(t) > 150 or len(t.split()) < 4:
+            return ""
+        first = bool(FIRST_PERSON.match(t))
+        if not first and QUESTION_RE.search(text.lower()):   # câu hỏi ngược, không phải nhận xét
+            return ""
+        t = FIRST_PERSON.sub("bạn", t)
+        if first:                                  # "Tôi nghĩ ..." -> "Bạn nghĩ ..."
+            return t[0].upper() + t[1:] + "."
+        return f"Bạn nhận ra rằng {t[0].lower() + t[1:]}."
+
+    def _feedback(self, node, qn, opt, text, sig) -> str:
+        """Lời phản hồi ĐÚNG với câu trả lời vừa rồi (hiện trước câu hỏi kế tiếp).
+        Bấm lựa chọn: lời viết sẵn trong kịch bản. Gõ tự do: lời của AI (nếu có), không thì
+        nhắc lại ý người dùng + lời viết sẵn của lựa chọn gần nghĩa nhất / của câu hỏi."""
+        if node["id"] == "OPENING" and (sig["detail_branch"] or sig["emotion_letter"]) and not sig["uncertain"]:
+            mirror = sig.get("feedback") or self._mirror(text)
+            return f"{mirror} Mình cùng bắt đầu từ chính điều đó nhé." if mirror else ""
+        if node["type"] != "question" or node["id"] == EXIT_Q or sig["uncertain"]:
+            return ""
+        if opt:
+            return opt.get("feedback", "")
+        if sig.get("feedback"):
+            return sig["feedback"]
+        near = next((o for o in qn.get("options", []) if o["id"] == sig["nearest_option_id"]), None)
+        base = (near or {}).get("feedback") or qn.get("feedback", "")
+        mirror = self._mirror(text) if base else ""
+        return " ".join(x for x in (mirror, base) if x)
+
+    def _auto_pick(self, s, qid) -> Optional[dict]:
+        """Câu mở đầu nhánh hỏi điều người dùng VỪA nói rồi (vd đã nói "đôi mắt" mà nhánh lại hỏi
+        "điều gì thu hút bạn: nụ cười / đôi mắt...?") -> coi như đã trả lời, đi thẳng vào câu kế."""
+        if qid in s["answers"]:
+            return None
+        q = self.q[qid][0]
+        text = next((h["content"] for h in reversed(s["history"]) if h["role"] == "user"), "")
+        o = self._match_option(q, text)
+        if not o or (o.get("next") or {}).get("type") != "question" or o["next"]["id"] in s["answers"]:
+            return None
+        branch = self.q[qid][2]
+        s["answers"][qid] = {"option_id": o["id"], "label": o["label"], "text": text,
+                             "uncertain": False, "depth": 1, "auto": True}
+        if branch:
+            s["last_branch"] = branch
+            s["branch_last_q"][branch] = qid
+        self._add(s["selected_details"], o["label"])
+        return self._qnode(o["next"]["id"])
 
     @staticmethod
     def _valid_q(t: str) -> Optional[str]:
@@ -600,6 +714,8 @@ class Engine:
             return src.get("resume") or self._qnode(EXIT_Q)
         if t == "stage":
             entry = self.d["stages"][nav["id"]].get("entry_question")
+            if nav["id"] == "STAGE_4" and entry in s["answers"]:   # đã qua phần nhìn lại: không hỏi lại Q4.1
+                return self._after_revisit(s)
             return self._resolve(s, self._qnode(entry), src, sig, True, hook, depth + 1)
         if t == "question":
             qid = nav["id"]
@@ -626,7 +742,7 @@ class Engine:
                 entry, s["entry_hint"] = tgt["entry_rules"][0]["start_at"], None
             if entry in s["answers"]:
                 entry = self._next_unanswered(s, bid) or entry
-            return self._qnode(entry)
+            return self._auto_pick(s, entry) or self._qnode(entry)
         if t == "dynamic":
             return self._dynamic(s, nav["rule"], src, sig, depth)
         return self._qnode(EXIT_Q)
@@ -716,12 +832,12 @@ class Engine:
     # ======================================================================
     # END
     # ======================================================================
-    def _finish(self, s) -> dict:
+    def _finish(self, s, feedback: str = "") -> dict:
         s["ended"], s["stage_idx"] = True, 3
         s["node"] = {"type": "end", "id": "AUTO_ASSESSMENT"}
         s["closing_note"] = self._closing_note(s)
         s["history"].append({"role": "assistant", "content": s["closing_note"]})
-        return {"state": s, "ack": s["closing_note"], "contexts": [], "question": None, "stage": 3,
+        return {"state": s, "ack": s["closing_note"], "feedback": feedback, "contexts": [], "question": None, "stage": 3,
                 "ended": True, "assessment": self.assessment(s), "detail": None, "sources": [], "debug": None}
 
     def _closing_note(self, s) -> str:

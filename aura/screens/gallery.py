@@ -21,12 +21,17 @@ def _norm(s: str) -> str:
     return "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
 
 
+def bookmark_icon(on: bool, size: float = 20, off_color: str = MUTED) -> ft.Control:
+    """Đã lưu: dấu trang tô kín màu thương hiệu; chưa lưu: chỉ viền."""
+    return icon("bookmark-filled" if on else "bookmark", size, PRIMARY if on else off_color)
+
+
 def _bookmark(app, p: Painting) -> ft.Control:
-    ic = ft.Container(icon("bookmark", 20, PRIMARY if p.id in app.state.saved else MUTED))
+    ic = ft.Container(bookmark_icon(p.id in app.state.saved))
 
     def toggle(e):
         on = app.toggle_saved(p.id)
-        ic.content = icon("bookmark", 20, PRIMARY if on else MUTED)
+        ic.content = bookmark_icon(on)
         ic.update()
     ic.on_click = toggle
     return ic
@@ -178,7 +183,7 @@ def build(app, q) -> ft.View:
         grid_holder,
         empty,
         V(15.6),
-        T("Ảnh: National Gallery, London", 11, 400, MUTED),
+        T("Ảnh: Wikimedia Commons (tranh thuộc phạm vi công cộng)", 11, 400, MUTED),
     ], bottom=25.4)
     return screen("/gallery", content, top=top_bar("Kho tranh", on_back=app.back_handler),
                   nav=bottom_nav(1, app.go))

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from ..data import PAINTINGS
+from ..data import DEFAULT_ID, PAINTINGS
 from ..theme import BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
 from ..ui import (H, T, V, body, bottom_nav, cropped_image, icon, kicker, screen, top_bar)
 
@@ -26,8 +26,8 @@ def _crop_at(base, zoom: float, aspect_box: float, img_aspect: float):
     return (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
 
 
-def build(app, q, pid: str = "arnolfini", key: str = "") -> ft.View:
-    p = PAINTINGS.get(pid) or PAINTINGS["arnolfini"]
+def build(app, q, pid: str = DEFAULT_ID, key: str = "") -> ft.View:
+    p = PAINTINGS.get(pid) or PAINTINGS[DEFAULT_ID]
     d = p.details.get(key) or next(iter(p.details.values()))
     cw = app.content_width
     box_h = 370

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import flet as ft
 
-from ..data import ARNOLFINI
+from ..data import MONA_LISA
 from ..theme import BORDER, BUTTON_H, INK, MUTED, PRIMARY, RADIUS, SURFACE
 from ..ui import (H, T, V, body, cropped_image, divider, kicker, outline_button, primary_button,
                   screen, snack, surface_field, text_link, top_bar)
 
-WELCOME_CROP = (0.39, 0.29, 0.99, 0.625)
+WELCOME_CROP = (0.0, 0.08, 1.0, 0.59)       # gương mặt và vai của Mona Lisa
 
 
 def welcome(app, q) -> ft.View:
-    p = ARNOLFINI
+    p = MONA_LISA
     cw = app.content_width
     content = body([
         V(25),
@@ -21,7 +21,7 @@ def welcome(app, q) -> ft.View:
         V(27.5),
         cropped_image(p.image, p.aspect, cw, 270, WELCOME_CROP, on_click=lambda e: app.go("/home")),
         V(6.5),
-        T("Jan van Eyck · 1434 · National Gallery, London", 10, 400, MUTED),
+        T(f"{p.artist} · {p.year} · {p.museum}", 10, 400, MUTED),
         V(21.5),
         T("Cùng nhìn chậm một chút.", 23, serif=True),
         V(9.5),

@@ -26,6 +26,10 @@ flet build ipa      # iOS (cần máy Mac + Xcode)
 
 Cấu hình đóng gói nằm trong `pyproject.toml`.
 
+## Đưa lên mạng cho người khác dùng thử (có AI)
+
+Chạy app trên máy chủ Render (miễn phí), key AI giữ trên máy chủ: xem [DEPLOY.md](DEPLOY.md).
+
 ## Cấu trúc
 
 ```
@@ -47,6 +51,12 @@ aura/
     quiz.py             Quiz & cảm nhận
     result.py           Kết quả & cảm nhận
     profile.py          Hồ sơ, tài khoản liên kết, thông tin app, đăng xuất
+Chatbot/                Chatbot Socrates chạy theo kịch bản JSON
+  aura_adapter.py       Cầu nối chatbot với màn chat (AuraChatbotEngine)
+  engine.py, hub.py     Bộ máy chạy kịch bản, chọn tranh
+  llm.py                Gọi LLM (tuỳ chọn) để hiểu câu gõ tự do
+  scripts/              Kịch bản: mỗi tranh một file <Tên_tranh>.json
+cli_demo.py             Chat thử chatbot ngay trong terminal
 assets/                 Font, icon (Lucide), ảnh tranh
 tests/                  Kiểm thử luồng đăng nhập OAuth
 docs/BAO_CAO.md         Báo cáo quá trình xây dựng giao diện
@@ -66,6 +76,26 @@ docs/BAO_CAO.md         Báo cáo quá trình xây dựng giao diện
 | `/quiz/<id>`, `/result/<id>` | Quiz & cảm nhận, Kết quả |
 | `/profile` | Hồ sơ cá nhân |
 
+## Chatbot theo kịch bản
+
+`main.py` dùng `AuraChatbotEngine` (`Chatbot/aura_adapter.py`):
+
+- Tranh có kịch bản trong `Chatbot/scripts/` chạy bằng chatbot của nhóm. Tên file khớp với `id`
+  của tranh trong `aura/data.py`, không phân biệt hoa thường và dấu `-`/`_`
+  (ví dụ `mona-lisa` ↔ `Mona_Lisa.json`).
+- Tranh chưa có kịch bản dùng kịch bản mẫu trong `aura/socratic.py`.
+- Muốn đính kèm ảnh chi tiết khi hội thoại vào một nhánh, khai báo `chat_branches` của tranh
+  trong `aura/data.py` (ví dụ `"BRANCH_2A": "face"`).
+
+```bash
+python cli_demo.py                  # chat thử trong terminal
+pip install -r requirements-dev.txt # thư viện LLM (tuỳ chọn), rồi điền key vào .env
+python -m Chatbot.doctor            # kiểm tra key và model dùng được
+```
+
+Không có key, chatbot chạy chế độ từ khoá offline. **Không** nhúng key LLM vào app hay bản web:
+bản đóng gói luôn chạy offline. Muốn dùng LLM cho người dùng thật cần một máy chủ trung gian giữ key.
+
 ## Gắn phương pháp Socrates của nhóm
 
 Màn chat chỉ gọi tới interface `SocraticEngine` trong `aura/socratic.py`:
@@ -81,7 +111,8 @@ AuraApp(page, engine=MyEngine())
 
 `AuraTurn` gồm: các đoạn văn, gợi ý trả lời (`Choice`), chặng hiện tại (0–3:
 Ấn tượng đầu → Tách chi tiết → Đối thoại → Mở rộng), ảnh chi tiết đính kèm, thẻ tổng kết, dòng nguồn.
-`ScriptedSocraticEngine` chỉ là **dữ liệu mẫu** (chép từ bản thiết kế) để giao diện chạy được.
+`ScriptedSocraticEngine` là kịch bản **dự phòng** dựng từ dữ liệu tranh, dùng cho tranh chưa có
+file JSON trong `Chatbot/scripts/`.
 
 **Khi có JSON hội thoại + engine đọc JSON:** viết một lớp adapter nhỏ gọi engine đó trong
 `start()`/`reply()` rồi chuyển kết quả sang `AuraTurn` (đoạn văn → `paragraphs`, lựa chọn → `choices`,

@@ -320,7 +320,7 @@ def card(content: ft.Control, *, bgcolor: str = WHITE, border: str | None = BORD
 
 
 def source_line(text: str, on_click: Handler = None, size: float = 10) -> ft.Container:
-    """Dòng nguồn có icon sách: '📖 Thông tin & ảnh: National Gallery, London ↗'."""
+    """Dòng nguồn có icon sách: '📖 Thông tin & ảnh: Bảo tàng Louvre, Paris ↗'."""
     return ft.Container(ft.Row([icon("book-open", 15, MUTED), H(8.5), T(text, size, 400, MUTED,
                                                                        expand=True)],
                                spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -339,13 +339,15 @@ def snack(page: ft.Page, message: str) -> None:
 
 
 def bottom_sheet(page: ft.Page, title: str, text: str) -> None:
+    """Bảng trượt từ dưới lên, cao vừa đúng nội dung (scrollable=True cho phép cao hơn
+    mức mặc định 9/16 màn hình khi nội dung dài)."""
     page.show_dialog(ft.BottomSheet(
         ft.Container(ft.Column([
             ft.Container(ft.Container(width=36, height=4, bgcolor=BORDER, border_radius=2),
                          alignment=ft.Alignment.CENTER),
             V(18), T(title, 23, 400, INK, serif=True), V(10), T(text, 14, 400, INK), V(12),
         ], spacing=0, tight=True), padding=ft.Padding.only(left=24, right=24, top=12, bottom=24)),
-        bgcolor=BG, show_drag_handle=False,
+        bgcolor=BG, show_drag_handle=False, scrollable=True,
     ))
 
 

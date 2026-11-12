@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from ..data import PAINTINGS
+from ..data import DEFAULT_ID, PAINTINGS
 from ..theme import BEIGE, INK, MUTED, PRIMARY, RADIUS, TINT, WHITE
 from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, icon, kicker,
                   primary_button, screen, source_line, top_bar)
@@ -33,8 +33,8 @@ def _look_point(n: int, title: str, text: str) -> ft.Control:
     ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START)
 
 
-def build(app, q, pid: str = "arnolfini") -> ft.View:
-    p = PAINTINGS.get(pid) or PAINTINGS["arnolfini"]
+def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
+    p = PAINTINGS.get(pid) or PAINTINGS[DEFAULT_ID]
     cw = app.content_width
     img_h = cw / p.aspect
     first_detail = next(iter(p.details))
@@ -52,10 +52,12 @@ def build(app, q, pid: str = "arnolfini") -> ft.View:
     def toggle_save(e):
         saved["on"] = app.toggle_saved(p.id)
         bar.content.controls[2] = ft.Container(
-            icon("bookmark", 24, PRIMARY if saved["on"] else INK), on_click=toggle_save)
+            icon("bookmark-filled" if saved["on"] else "bookmark", 24,
+                 PRIMARY if saved["on"] else INK), on_click=toggle_save)
         bar.update()
 
-    bar = top_bar("Tổng quan tranh", on_back=app.back_handler, trailing="bookmark",
+    bar = top_bar("Tổng quan tranh", on_back=app.back_handler,
+                  trailing="bookmark-filled" if saved["on"] else "bookmark",
                   trailing_color=PRIMARY if saved["on"] else INK, on_trailing=toggle_save,
                   offset_top=11)
     content = body([

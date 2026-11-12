@@ -1,5 +1,2 @@
 flet==1.0.5
 httpx>=0.27
-google-genai
-python-dotenv
-openai
