@@ -44,6 +44,13 @@ class Summary:
 
 
 @dataclass
+class Info:
+    """Thẻ tư liệu: thông tin AURA tra trong kho tư liệu của tranh (danh tính, bối cảnh...)."""
+    topic: str
+    text: str
+
+
+@dataclass
 class AuraTurn:
     paragraphs: list[str]
     choices: list[Choice] = field(default_factory=list)
@@ -52,6 +59,8 @@ class AuraTurn:
     summary: Summary | None = None
     source: str | None = None        # dòng nguồn dưới tin nhắn cuối
     done: bool = False
+    infos: list[Info] = field(default_factory=list)   # thẻ tư liệu, hiện trước đoạn thứ info_at
+    info_at: int = 0
 
 
 @dataclass

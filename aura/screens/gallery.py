@@ -6,7 +6,7 @@ import unicodedata
 import flet as ft
 
 from ..data import FEATURED, FILTERS, GRID, PAINTINGS, Painting
-from ..theme import BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
+from ..theme import GLASS, GLASS_EDGE, GLASS_STRONG, MAT_BG, BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
 from ..ui import (H, T, V, body, bottom_nav, card, chip, framed_image, icon, primary_button,
                   screen, surface_field, tag, top_bar)
 
@@ -42,7 +42,7 @@ def featured_card(app, p: Painting) -> ft.Control:
     img_w = min(FEATURED_IMG_W, FEATURED_IMG_H * p.aspect)
     img_h = img_w / p.aspect
     return ft.Container(card(ft.Column([
-        ft.Container(framed_image(p.image, img_w - 4, img_h - 4), bgcolor=BEIGE,
+        ft.Container(framed_image(p.image, img_w - 4, img_h - 4), bgcolor=MAT_BG,
                      height=FEATURED_IMG_H + 48, alignment=ft.Alignment.CENTER),
         ft.Container(ft.Column([
             T(p.title, 19, serif=True, ls=0),
@@ -59,7 +59,7 @@ def grid_card(app, p: Painting, width: float) -> ft.Control:
     img_w = width - 28
     img_h = img_w / p.aspect
     return card(ft.Column([
-        ft.Container(framed_image(p.image, img_w - 4, img_h - 4), bgcolor=BEIGE,
+        ft.Container(framed_image(p.image, img_w - 4, img_h - 4), bgcolor=MAT_BG,
                      padding=ft.Padding.symmetric(vertical=15), alignment=ft.Alignment.CENTER),
         ft.Container(ft.Column([
             T(p.title, 13, 600, INK, lh=1.31),
@@ -156,7 +156,7 @@ def build(app, q) -> ft.View:
                      hint_style=ft.TextStyle(size=13, color=MUTED, font_family="Inter", letter_spacing=0),
                      **surface_field()),
     ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        height=46, bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=23,
+        height=46, bgcolor=GLASS_STRONG, border=ft.Border.all(1, GLASS_EDGE), border_radius=23,
         padding=ft.Padding.only(left=19, right=16))
 
     refresh(update=False)
@@ -204,7 +204,7 @@ def saved(app, q) -> ft.View:
                                   height=44),
         ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.Padding.symmetric(vertical=40, horizontal=12),
-            bgcolor=WHITE, border=ft.Border.all(1, BORDER), border_radius=RADIUS)]
+            bgcolor=GLASS, border=ft.Border.all(1, GLASS_EDGE), border_radius=RADIUS)]
     content = body([
         V(22),
         T("Những bức tranh bạn muốn quay lại.", 29, serif=True),

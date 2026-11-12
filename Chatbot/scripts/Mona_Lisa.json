@@ -145,7 +145,7 @@
     "items": {
       "C1": {
         "topic": "Danh tính người mẫu",
-        "content": "Người phụ nữ thường được xác định là Lisa Gherardini (1479–1542), vợ của thương nhân buôn lụa Francesco del Giocondo ở Florence. Vì vậy ở Ý bức tranh còn được gọi là “La Gioconda”, ở Pháp là “La Joconde”.",
+        "content": "Người phụ nữ thường được xác định là Lisa Gherardini (1479–1542), vợ của thương nhân buôn lụa Francesco del Giocondo ở Florence, vì vậy ở Ý bức tranh còn được gọi là “La Gioconda”, ở Pháp là “La Joconde”. Bà lấy chồng năm 1495 và có nhiều con; khi Leonardo bắt đầu vẽ (khoảng năm 1503), bà khoảng 24 tuổi.",
         "trigger_condition": "Hỏi về danh tính"
       },
       "C2": {
@@ -174,25 +174,30 @@
         "trigger_condition": "Hỏi về vị trí nhân vật và cách sắp xếp"
       },
       "C7": {
-        "topic": "Trang phục",
-        "content": "Trang phục tối màu, lớp voan mỏng trên tóc và việc không đeo trang sức có thể đặt trong bối cảnh tầng lớp thương nhân khá giả ở Florence đầu thế kỷ 16. Tuy vậy, không nên suy luận chắc chắn về tính cách một người chỉ từ trang phục.",
+        "topic": "Trang phục và địa vị",
+        "content": "Lisa xuất thân từ dòng họ Gherardini, một gia đình quý tộc lâu đời ở Florence nhưng đã sa sút, rồi lấy một thương nhân buôn lụa thành đạt. Bà không thuộc giới quyền quý, cũng không phải dân nghèo, mà thuộc tầng lớp thị dân khá giả. Trang phục tối màu, lớp voan mỏng trên tóc và việc không đeo trang sức hợp với bối cảnh ấy ở Florence đầu thế kỷ 16; tuy vậy, không nên suy luận chắc chắn về tính cách một người chỉ từ trang phục.",
         "trigger_condition": "Hỏi về quần áo, địa vị xã hội"
       },
       "C8": {
         "topic": "Danh tiếng",
-        "content": "Bức tranh (sơn dầu trên gỗ dương, 77 × 53 cm) được lưu giữ tại Bảo tàng Louvre, Paris. Năm 1911 nó bị đánh cắp và mất tích hơn hai năm; vụ việc lên mặt báo khắp thế giới, góp phần biến Mona Lisa thành bức tranh nổi tiếng bậc nhất.",
+        "content": "Bức tranh (sơn dầu trên gỗ dương, 77 × 53 cm) được lưu giữ tại Bảo tàng Louvre, Paris. Năm 1911 nó bị đánh cắp và mất tích hơn hai năm; vụ việc lên mặt báo khắp thế giới, góp phần biến Mona Lisa thành bức tranh nổi tiếng bậc nhất. Bức tranh thuộc sở hữu nhà nước Pháp và theo luật không được mua bán, nên không có giá bán.",
         "trigger_condition": "Hỏi vì sao bức tranh nổi tiếng"
+      },
+      "C9": {
+        "topic": "Họa sĩ",
+        "content": "Leonardo da Vinci (1452–1519) sinh ở thị trấn Vinci gần Florence và học nghề trong xưởng của Andrea del Verrocchio. Ông vừa là họa sĩ vừa say mê nghiên cứu giải phẫu, cơ khí, thủy lợi, thậm chí thiết kế cả những cỗ máy biết bay; ngoài Mona Lisa, ông còn nổi tiếng với bức “Bữa tối cuối cùng” ở Milan. Ông không lập gia đình và không có con. Những năm cuối đời ông sống ở Pháp theo lời mời của vua François I và mất tại Amboise năm 1519.",
+        "trigger_condition": "Hỏi về họa sĩ Leonardo da Vinci"
       }
     },
     "rules": [
       {
-        "if_user_asks_about": "danh tính, là ai, người mẫu, tên thật, tên của cô ấy",
+        "if_user_asks_about": "danh tính, là ai, người mẫu, tên thật, tên của cô ấy, tên gì, tên là gì, có chồng, chồng của, chồng cô, bao nhiêu tuổi, mấy tuổi, có con, người thật, có thật không, la gioconda",
         "show": [
           "C1"
         ]
       },
       {
-        "if_user_asks_about": "thời gian hoặc hoàn cảnh sáng tác, bối cảnh ra đời, bối cảnh lịch sử, bối cảnh sáng tác, hoàn cảnh ra đời, vẽ khi nào, vẽ năm nào, vẽ vào năm, sáng tác khi nào, được vẽ ra",
+        "if_user_asks_about": "thời gian hoặc hoàn cảnh sáng tác, bối cảnh ra đời, bối cảnh lịch sử, bối cảnh sáng tác, hoàn cảnh ra đời, vẽ khi nào, vẽ năm nào, vẽ vào năm, sáng tác khi nào, được vẽ ra, vẽ bao lâu, mất bao lâu, vẽ trong bao lâu, thời kỳ nào, thế kỷ nào, năm bao nhiêu",
         "show": [
           "C2",
           "C3"
@@ -217,15 +222,21 @@
         ]
       },
       {
-        "if_user_asks_about": "quần áo, địa vị xã hội",
+        "if_user_asks_about": "quần áo, địa vị xã hội, quý tộc, dân thường, thường dân, giàu, nghèo, tầng lớp, giai cấp, xuất thân, địa vị, gia thế, gia cảnh",
         "show": [
           "C7"
         ]
       },
       {
-        "if_user_asks_about": "vì sao bức tranh nổi tiếng, nổi tiếng, danh tiếng, bị đánh cắp, bị trộm",
+        "if_user_asks_about": "vì sao bức tranh nổi tiếng, nổi tiếng, danh tiếng, bị đánh cắp, bị trộm, bao nhiêu tiền, giá bao nhiêu, giá trị bao nhiêu, có đắt, bán được, hiện ở đâu, đang ở đâu, để ở đâu, trưng bày, bảo tàng nào, louvre, kích thước, to bao nhiêu, lớn cỡ nào, chất liệu, vẽ trên gì",
         "show": [
           "C8"
+        ]
+      },
+      {
+        "if_user_asks_about": "leonardo là ai, da vinci là ai, họa sĩ là ai, ai vẽ, người vẽ, tác giả, tiểu sử, cuộc đời leonardo, leonardo có vợ, ông ấy có vợ, ông có vợ, leonardo sinh, leonardo mất, leonardo chết, ông ấy là ai, ông là ai",
+        "show": [
+          "C9"
         ]
       }
     ]
@@ -747,7 +758,7 @@
                     "type": "question",
                     "id": "Q2A.2_C"
                   },
-                  "feedback": "Hướng nhìn là một chi tiết tinh ý, vì cảm giác được nhìn lại là điều khiến bức tranh này khác nhiều chân dung trước đó."
+                  "feedback": "Hướng nhìn đáng để ý: cảm giác được nhìn lại là điều khiến bức tranh này khác nhiều chân dung trước đó."
                 },
                 {
                   "id": "D",
@@ -779,7 +790,7 @@
                 {
                   "id": "C",
                   "label": "Có phần gượng gạo",
-                  "feedback": "Nhận xét này khá tinh: một nét mặt phải giữ lâu trước người vẽ có thể mang chút gượng, mà ngồi làm mẫu thời ấy thường kéo dài nhiều buổi."
+                  "feedback": "Cảm giác gượng có thể đến từ chính việc làm mẫu: một nét mặt phải giữ lâu trước người vẽ dễ mang chút gượng, mà ngồi làm mẫu thời ấy thường kéo dài nhiều buổi."
                 },
                 {
                   "id": "D",
@@ -913,7 +924,7 @@
                 {
                   "id": "B",
                   "label": "Mình đang diễn giải chúng theo những cách khác nhau",
-                  "feedback": "Bạn nhận ra vai trò của chính người xem, một nhận xét rất sâu: một phần cảm xúc ta thấy là do ta mang vào tranh."
+                  "feedback": "Bạn đang chạm tới vai trò của chính người xem: một phần cảm xúc ta thấy trong tranh là do ta mang vào."
                 },
                 {
                   "id": "C",
@@ -995,7 +1006,8 @@
                   "note": "Chọn nhánh IF khác của Q2A.1 (ưu tiên nhánh người dùng chưa đi)",
                   "feedback": "Được, mình giữ cách hiểu của bạn và cùng đi tiếp nhé."
                 }
-              ]
+              ],
+              "feedback": "Nhìn lại lần thứ hai là cách để kiểm tra cảm nhận ban đầu của chính mình."
             },
             "Q2A.2_B": {
               "id": "Q2A.2_B",
@@ -1087,7 +1099,7 @@
                     "type": "question",
                     "id": "Q2A.6_B"
                   },
-                  "feedback": "Nhận ra ánh mắt và nụ cười “lệch pha” là một quan sát rất tinh, nhiều người cho rằng bí ẩn của bức tranh nằm chính ở chỗ này."
+                  "feedback": "Ánh mắt và nụ cười “lệch pha” nhau: nhiều người cho rằng bí ẩn của bức tranh nằm chính ở chỗ này."
                 }
               ],
               "feedback": "Đặt ánh mắt cạnh nụ cười là cách nhìn giúp mình hiểu gương mặt này rõ hơn cả."
@@ -1142,7 +1154,7 @@
                 {
                   "id": "C",
                   "label": "Mình đang nhìn nhận mỗi chi tiết theo một cách khác nhau",
-                  "feedback": "Bạn nhận ra người xem cũng góp phần tạo nên cảm xúc trong tranh, đó là một suy nghĩ rất sâu."
+                  "feedback": "Bạn đang nói tới vai trò của người xem: cùng một nét vẽ, mỗi người có thể đọc ra một cảm xúc khác."
                 }
               ],
               "default_next": {
@@ -1275,7 +1287,7 @@
                 {
                   "id": "B",
                   "label": "Khiến biểu cảm khó xác định hơn",
-                  "feedback": "Một nhận xét sâu: bóng mờ ở khóe miệng và đuôi mắt khiến ta phải tự lấp đầy biểu cảm, nên mỗi người thấy một khác."
+                  "feedback": "Bóng mờ ở khóe miệng và đuôi mắt khiến ta phải tự lấp đầy biểu cảm, nên mỗi người lại thấy một khác."
                 },
                 {
                   "id": "C",
@@ -1374,7 +1386,7 @@
                 {
                   "id": "D",
                   "label": "Có phần gượng gạo",
-                  "feedback": "Một nhận xét thú vị: tư thế giữ lâu để làm mẫu có thể mang chút sắp đặt, dù đôi tay trông rất mềm."
+                  "feedback": "Cảm giác gượng gạo có cơ sở: tư thế phải giữ lâu để làm mẫu có thể mang chút sắp đặt, dù đôi tay trông rất mềm."
                 }
               ],
               "default_next": {
@@ -1455,7 +1467,7 @@
                 {
                   "id": "C",
                   "label": "Tự tin",
-                  "feedback": "Tự tin là cách đọc thú vị: cô ấy chiếm gần trọn khung tranh và hướng mặt ra, không né tránh người xem."
+                  "feedback": "Cảm giác tự tin có cơ sở: cô ấy chiếm gần trọn khung tranh và hướng mặt ra, không né tránh người xem."
                 },
                 {
                   "id": "D",
@@ -1481,7 +1493,7 @@
                     "type": "question",
                     "id": "Q2B.4_B"
                   },
-                  "feedback": "Bạn đã nhận ra bản chất của chân dung đặt vẽ: bức tranh này nhiều khả năng do gia đình cô ấy đặt, và người mẫu phải ngồi trong nhiều buổi."
+                  "feedback": "Đây là một chân dung đặt vẽ: nhiều khả năng chồng cô ấy, thương nhân Francesco del Giocondo, đã đặt Leonardo vẽ, và người mẫu phải ngồi trong nhiều buổi."
                 },
                 {
                   "id": "B",
@@ -1534,7 +1546,7 @@
                 "type": "branch",
                 "id": "BRANCH_3A"
               },
-              "feedback": "Nhận ra dấu hiệu của sự sắp đặt là cách nhìn của một người xem rất tỉnh táo."
+              "feedback": "Nhận ra dấu hiệu của sự sắp đặt giúp mình nhìn chân dung như một tác phẩm được dựng nên, không chỉ là một khoảnh khắc chụp lại."
             },
             "Q2B.2_CD": {
               "id": "Q2B.2_CD",
@@ -1782,12 +1794,12 @@
                 {
                   "id": "C",
                   "label": "Cá tính",
-                  "feedback": "Đọc cá tính qua trang phục là một gợi ý thú vị, chỉ cần nhớ rằng trang phục trong chân dung thường do người đặt vẽ lựa chọn."
+                  "feedback": "Trang phục có thể gợi một chút cá tính, chỉ cần nhớ rằng trang phục trong chân dung thường do người đặt vẽ lựa chọn."
                 },
                 {
                   "id": "D",
                   "label": "Không thể suy luận chỉ từ trang phục",
-                  "feedback": "Đây là một thái độ thận trọng rất đáng quý khi xem tranh: trang phục chỉ gợi ý, không đủ để kết luận về một con người."
+                  "feedback": "Thận trọng như vậy là hợp lý: trang phục chỉ gợi ý, không đủ để kết luận về một con người."
                 }
               ],
               "default_next": {
@@ -1809,7 +1821,7 @@
                   "C7"
                 ]
               },
-              "feedback": "Trang phục chỉ gợi ý về người mặc, và bạn đang đọc những gợi ý ấy rất cẩn trọng."
+              "feedback": "Trang phục chỉ gợi ý về người mặc; điều nói chắc được là cô ấy thuộc một gia đình thương nhân khá giả ở Florence."
             },
             "Q2C.2_D": {
               "id": "Q2C.2_D",
@@ -1945,7 +1957,7 @@
                     "type": "question",
                     "id": "Q2D.2_F"
                   },
-                  "feedback": "So sánh nhân vật với cảnh vật là cách nhìn rất hay: một bên rõ, ấm và gần, một bên mờ, lạnh và xa."
+                  "feedback": "Nhân vật và cảnh vật như hai thế giới: một bên rõ, ấm và gần, một bên mờ, lạnh và xa."
                 }
               ],
               "max_options_exception": true,
@@ -2384,7 +2396,8 @@
               "default_next": {
                 "type": "question",
                 "id": "Q2E.2"
-              }
+              },
+              "feedback": "Ánh sáng ấm trên người cô ấy là một trong những cách Leonardo đưa mắt ta về nhân vật."
             },
             "Q2E.3_B": {
               "id": "Q2E.3_B",
@@ -2410,7 +2423,8 @@
               "default_next": {
                 "type": "question",
                 "id": "Q2E.2"
-              }
+              },
+              "feedback": "Ánh sáng ở phía xa nhạt và lạnh hơn, đủ kéo mắt đi sâu vào cảnh mà không lấn át nhân vật."
             },
             "Q2E.3_C": {
               "id": "Q2E.3_C",
@@ -2442,7 +2456,8 @@
                 "context": [
                   "C4"
                 ]
-              }
+              },
+              "feedback": "Sự chuyển tiếp mềm giữa sáng và tối là điều làm nên vẻ sống động rất riêng của bức tranh này."
             },
             "Q2E.3_D": {
               "id": "Q2E.3_D",
@@ -2452,7 +2467,7 @@
                 {
                   "id": "A",
                   "label": "Có, mình sẽ quan sát lại",
-                  "feedback": "Bạn cứ chạm vào ảnh tranh nhỏ cạnh ô nhập để mở tranh, phóng to rồi quay lại nhé."
+                  "feedback": "Bạn chạm vào thẻ tranh ở đầu cuộc trò chuyện (hoặc ảnh nhỏ cạnh ô nhập) để mở tranh, chụm hai ngón tay để phóng to rồi quay lại nhé."
                 },
                 {
                   "id": "B",
@@ -2463,7 +2478,8 @@
               "default_next": {
                 "type": "question",
                 "id": "Q2E.2"
-              }
+              },
+              "feedback": "Phóng to tranh giúp mình thấy những chỗ chuyển sáng tối mà nhìn nhỏ khó nhận ra."
             }
           }
         }
@@ -2699,7 +2715,7 @@
                 {
                   "id": "C",
                   "label": "Tùy vào từng thời điểm",
-                  "feedback": "Bạn đặt cảm xúc vào hoàn cảnh, một cách nghĩ tinh tế, vì bức chân dung chỉ giữ lại một khoảnh khắc."
+                  "feedback": "Bạn đặt cảm xúc vào hoàn cảnh: bức chân dung chỉ giữ lại một khoảnh khắc, nên niềm vui lúc ấy có thể đang ở mức rất khẽ."
                 }
               ],
               "default_next": {
@@ -2753,7 +2769,7 @@
                 {
                   "id": "B",
                   "label": "Cô ấy đang kiểm soát biểu cảm",
-                  "feedback": "Ý này rất sắc: giữ nét mặt điềm đạm trước người khác có thể là chuẩn mực ứng xử của phụ nữ khá giả thời đó."
+                  "feedback": "Giữ nét mặt điềm đạm trước người khác có thể là chuẩn mực ứng xử của phụ nữ khá giả thời đó, nên sự bình thản ấy có thể là một lựa chọn."
                 },
                 {
                   "id": "C",
@@ -2785,7 +2801,7 @@
                 {
                   "id": "B",
                   "label": "Không nhất thiết",
-                  "feedback": "Với bạn, bình thản có thể là một dạng hạnh phúc lặng lẽ, một cách nghĩ rất đẹp."
+                  "feedback": "Với bạn, bình thản có thể là một dạng hạnh phúc lặng lẽ, không cần thể hiện thành nụ cười rõ."
                 },
                 {
                   "id": "C",
@@ -2817,7 +2833,7 @@
                 {
                   "id": "C",
                   "label": "Bản thân mình",
-                  "feedback": "Nghĩ về chính mình là một cách hiểu sâu, cô ấy như đang ở trong thế giới riêng."
+                  "feedback": "Nghĩ về chính mình: cách hiểu này khiến cô ấy như đang ở trong thế giới riêng, dù vẫn ngồi trước người vẽ."
                 },
                 {
                   "id": "D",
@@ -2859,7 +2875,7 @@
                 {
                   "id": "E",
                   "label": "Suy đoán cá nhân",
-                  "feedback": "Bạn tách bạch được đâu là điều thấy, đâu là điều mình tưởng tượng, đó là cách nhìn rất tỉnh táo."
+                  "feedback": "Bạn tách bạch đâu là điều thấy, đâu là điều mình tưởng tượng; giữ ranh giới ấy giúp cách hiểu không đi quá xa bức tranh."
                 }
               ],
               "default_next": {
@@ -2940,7 +2956,7 @@
                 {
                   "id": "C",
                   "label": "Thân thiện và xa cách",
-                  "feedback": "Vừa mời gọi vừa giữ khoảng cách, bạn gọi được đúng tên cảm giác khó nắm bắt của bức tranh."
+                  "feedback": "Vừa mời gọi vừa giữ khoảng cách: cặp cảm xúc này gọi tên khá sát cảm giác khó nắm bắt mà nhiều người thấy ở bức tranh."
                 },
                 {
                   "id": "D",
@@ -2972,7 +2988,7 @@
                 {
                   "id": "C",
                   "label": "Tùy trường hợp",
-                  "feedback": "Câu trả lời cân nhắc này cho thấy bạn không vội đóng khung cảm xúc của ai."
+                  "feedback": "Tùy trường hợp: có lúc nhiều cảm xúc làm gương mặt khó đọc, có lúc lại làm nó giống người thật hơn."
                 }
               ],
               "default_next": {
@@ -3013,7 +3029,8 @@
                   },
                   "feedback": "Được, đôi khi đổi góc nhìn sẽ giúp mình thấy cảm xúc rõ hơn."
                 }
-              ]
+              ],
+              "feedback": "Chưa gọi được tên cảm xúc cũng là một kết quả quan sát thật."
             },
             "Q3A.2F_switch": {
               "id": "Q3A.2F_switch",
@@ -3059,7 +3076,7 @@
                 {
                   "id": "C",
                   "label": "Do họa sĩ chủ ý thể hiện",
-                  "feedback": "Bạn nhắc đến vai trò của họa sĩ, một ý rất hay: Leonardo đã vẽ và chỉnh sửa bức tranh này trong nhiều năm, nên biểu cảm ấy được cân nhắc rất lâu."
+                  "feedback": "Vai trò của họa sĩ ở đây rất lớn: Leonardo đã vẽ và chỉnh sửa bức tranh này trong nhiều năm, nên biểu cảm ấy được cân nhắc rất lâu."
                 },
                 {
                   "id": "D",
@@ -3097,7 +3114,7 @@
                 {
                   "id": "D",
                   "label": "Những chi tiết khác",
-                  "feedback": "Bạn nghĩ đến cả những chi tiết ít được để ý, một cách nhìn rộng mở."
+                  "feedback": "Những chi tiết ít được để ý, như phong cảnh hay trang phục, cũng có thể dẫn người khác tới một cách hiểu khác hẳn."
                 },
                 {
                   "id": "E",
@@ -3109,7 +3126,7 @@
                 "type": "question",
                 "id": "Q3A.7"
               },
-              "feedback": "Nghĩ xem người khác có thể nhìn bức tranh ra sao là một bước rất trưởng thành khi xem tranh."
+              "feedback": "Nghĩ xem người khác có thể nhìn bức tranh ra sao giúp mình thấy cách hiểu của chính mình rõ hơn."
             },
             "Q3A.7": {
               "id": "Q3A.7",
@@ -3124,7 +3141,7 @@
                 {
                   "id": "B",
                   "label": "Thay đổi cách hiểu",
-                  "feedback": "Dám thay đổi cách hiểu sau khi nhìn kỹ là điều rất đáng quý khi xem tranh."
+                  "feedback": "Thay đổi cách hiểu sau khi nhìn kỹ cho thấy những gì bạn vừa quan sát đã thật sự có sức nặng."
                 },
                 {
                   "id": "C",
@@ -3370,7 +3387,7 @@
                 {
                   "id": "A",
                   "label": "Nhân vật ở trong một thế giới khác",
-                  "feedback": "Một thế giới khác, như chính phong cảnh tưởng tượng phía sau cô ấy, cách hiểu này rất giàu hình ảnh."
+                  "feedback": "Một thế giới khác, như chính phong cảnh tưởng tượng phía sau cô ấy: người và cảnh cùng thuộc về một nơi không hẳn là thực tại."
                 },
                 {
                   "id": "B",
@@ -3506,7 +3523,7 @@
                     "type": "question",
                     "id": "Q3C.2_C"
                   },
-                  "feedback": "Phong cảnh phản ánh tâm trạng là một cách hiểu sâu, coi cảnh vật như tiếng lòng của nhân vật."
+                  "feedback": "Coi phong cảnh như tiếng lòng của nhân vật: sương mờ và vùng đất vắng người phía sau có thể được đọc như tâm trạng của cô ấy."
                 }
               ],
               "feedback": "Mối liên hệ giữa nhân vật và phong cảnh là một trong những câu hỏi thú vị nhất về bức tranh này."
@@ -3561,12 +3578,12 @@
                 {
                   "id": "C",
                   "label": "Giữa sự rõ nét và mờ ảo",
-                  "feedback": "Rõ nét và mờ ảo là sự tương phản do kỹ thuật tạo ra, bạn nhìn rất tinh."
+                  "feedback": "Rõ nét và mờ ảo là sự tương phản do kỹ thuật tạo ra: người được vẽ sắc hơn, còn cảnh vật ở xa nhòe dần theo phối cảnh khí quyển."
                 },
                 {
                   "id": "D",
                   "label": "Một yếu tố khác",
-                  "feedback": "Bạn nhận ra một kiểu tương phản riêng, điều đó cho thấy bạn nhìn rất kỹ."
+                  "feedback": "Một kiểu tương phản do chính bạn nhận ra là điều đáng để mình cùng nhìn kỹ thêm."
                 }
               ],
               "default_next": {
@@ -3930,7 +3947,7 @@
                 {
                   "id": "E",
                   "label": "Sự kết hợp của nhiều yếu tố",
-                  "feedback": "Nhìn danh tiếng như kết quả của nhiều yếu tố là một cách nhìn cân bằng và có cơ sở."
+                  "feedback": "Danh tiếng của Mona Lisa quả thật đến từ nhiều thứ cùng lúc: kỹ thuật, tên tuổi Leonardo, vụ đánh cắp năm 1911 và văn hóa đại chúng."
                 }
               ],
               "default_next": {
@@ -3957,7 +3974,7 @@
                 {
                   "id": "C",
                   "label": "Tùy vào cách đánh giá",
-                  "feedback": "Tùy cách đánh giá, một câu trả lời cân nhắc và mở."
+                  "feedback": "Tùy cách đánh giá: nếu đo bằng tầm ảnh hưởng thì danh tiếng có vai trò, còn nếu đo bằng cách tác phẩm chạm tới người xem thì không nhất thiết."
                 }
               ],
               "default_next": {
@@ -4018,13 +4035,14 @@
                     "type": "question",
                     "id": "Q3E.2_C"
                   },
-                  "feedback": "Kiểm tra lại cơ sở cho cách hiểu của mình là thói quen của người xem tranh rất kỹ."
+                  "feedback": "Kiểm tra lại cơ sở cho cách hiểu của mình nghĩa là quay về những gì thật sự thấy trên tranh; mình cùng làm nhé."
                 }
-              ]
+              ],
+              "feedback": "Thử một hướng nhìn khác không có nghĩa là bỏ cách hiểu cũ, mà là xem nó đứng vững đến đâu."
             },
             "Q3E.2_A": {
               "id": "Q3E.2_A",
-              "text": "Đổi góc nhìn đôi khi chỉ cần bắt đầu từ một chi tiết. Bạn muốn thử thay đổi góc nhìn theo chi tiết nào, và bạn sẽ diễn giải về nó ra sao?",
+              "text": "Đổi góc nhìn đôi khi chỉ cần bắt đầu từ một chi tiết. Bạn muốn thử nhìn lại bức tranh theo hướng nào?",
               "input_type": "choice_with_free_input",
               "options": [
                 {
@@ -4131,7 +4149,7 @@
                     "type": "question",
                     "id": "Q3E.2_A"
                   },
-                  "feedback": "Sẵn lòng thay đổi khi thấy chi tiết mới là một thái độ rất cởi mở."
+                  "feedback": "Vậy cách hiểu của bạn vẫn để ngỏ cho những chi tiết mới, như chính bức tranh vẫn để ngỏ biểu cảm của cô ấy."
                 },
                 {
                   "id": "B",
@@ -4151,7 +4169,8 @@
                   },
                   "feedback": "Mình cùng tìm hiểu thêm thông tin về bức tranh nhé."
                 }
-              ]
+              ],
+              "feedback": "Đặt cách hiểu của mình trước một câu hỏi nhỏ là cách kiểm tra xem nó dựa vào điều gì."
             }
           }
         }
@@ -4192,7 +4211,7 @@
                 "type": "question",
                 "id": "Q4.2_C"
               },
-              "feedback": "Ấn tượng ban đầu của bạn đứng vững sau cả hành trình, cho thấy trực giác của bạn khá chắc."
+              "feedback": "Ấn tượng ban đầu của bạn đứng vững sau cả hành trình, giờ nó còn có thêm những chi tiết làm điểm tựa."
             },
             {
               "id": "D",
@@ -4308,7 +4327,7 @@
             {
               "id": "B",
               "label": "Đôi bàn tay",
-              "feedback": "Đôi bàn tay là chi tiết nhiều người bỏ qua, bạn để ý được là rất tinh."
+              "feedback": "Đôi bàn tay là chi tiết nhiều người bỏ qua, dù Leonardo vẽ chúng kỹ không kém gương mặt."
             },
             {
               "id": "C",
@@ -4356,7 +4375,8 @@
               },
               "feedback": "Được, mình cùng sang câu cuối nhé."
             }
-          ]
+          ],
+          "feedback": "Chi tiết khiến bạn tò mò lâu nhất thường là chi tiết đáng quay lại nhất."
         },
         "Q4.2_C": {
           "id": "Q4.2_C",
@@ -4408,7 +4428,7 @@
             {
               "id": "C",
               "label": "Tùy trường hợp",
-              "feedback": "Tùy trường hợp, một câu trả lời cân nhắc và mở."
+              "feedback": "Tùy trường hợp: có cảm nhận cần được giải thích để chia sẻ, có cảm nhận chỉ cần được giữ lại cho riêng mình."
             }
           ],
           "default_next": {
@@ -4585,7 +4605,8 @@
           "default_next": {
             "type": "question",
             "id": "Q4.5"
-          }
+          },
+          "feedback": "Quay lại một phần đã xem với con mắt mới thường cho thấy điều lần đầu bỏ qua."
         },
         "Q4.5": {
           "id": "Q4.5",

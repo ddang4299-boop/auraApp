@@ -107,7 +107,9 @@ class OpenAICompatLLM:
 
     def __init__(self, model: str, api_key: str, base_url: str, temperature: float = 0.2):
         from openai import OpenAI
-        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=TIMEOUT, max_retries=1)
+        # max_retries=0: hết lượt (429) thì báo lỗi NGAY để chuyển sang model dự phòng, thay vì thư viện
+        # tự ngồi chờ 10-20 giây rồi thử lại trong khi người dùng nhìn màn hình đứng.
+        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=TIMEOUT, max_retries=0)
         self.model, self.temperature = model, temperature
         self.label = f"{base_url.split('//')[1].split('/')[0]}/{model}"
 
@@ -176,15 +178,16 @@ class FallbackLLM:
 
 
 def _build(provider: str) -> Optional[LLMFn]:
-    provider = provider.strip().lower()
+    """provider = "groq" (model mặc định / <PROVIDER>_MODEL) hoặc "groq:openai/gpt-oss-20b" (chỉ rõ model)."""
+    provider, _, pinned = provider.strip().partition(":")
+    provider = provider.lower()
     if provider not in PROVIDERS:
         raise ValueError(f"Provider không hợp lệ: {provider}. Chọn: {list(PROVIDERS)}")
     key_env, default_model, base_url = PROVIDERS[provider]
     key = os.getenv(key_env)
     if not key:
         return None
-    # LLM_MODEL chỉ áp cho provider chính; fallback luôn dùng model mặc định (hoặc <PROVIDER>_MODEL)
-    model = os.getenv(f"{provider.upper()}_MODEL") or default_model
+    model = pinned.strip() or os.getenv(f"{provider.upper()}_MODEL") or default_model
     if not model:
         raise ValueError(f"{provider} cần đặt {provider.upper()}_MODEL trong .env (vd model có đuôi ':free').")
     if provider == "gemini":
@@ -195,9 +198,10 @@ def _build(provider: str) -> Optional[LLMFn]:
 
 
 def make_llm() -> Optional[LLMFn]:
-    """LLM_PROVIDER = provider chính, LLM_FALLBACK = provider dự phòng (có thể để trống).
+    """LLM_PROVIDER = provider chính, LLM_FALLBACK = các provider dự phòng, cách nhau dấu phẩy
+    (vd "groq,groq:openai/gpt-oss-20b": hai model Groq có hạn mức riêng). Có thể để trống.
     Provider nào thiếu key thì bị bỏ qua; không còn cái nào -> None (engine chạy keyword offline)."""
-    names = [os.getenv("LLM_PROVIDER", "gemini")] + [os.getenv("LLM_FALLBACK", "")]
+    names = [os.getenv("LLM_PROVIDER", "gemini")] + os.getenv("LLM_FALLBACK", "").split(",")
     chain = []
     for n in names:
         if not n.strip():

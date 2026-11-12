@@ -13,8 +13,8 @@ import flet as ft
 from . import auth
 from .auth import Profile
 from .socratic import Message, ScriptedSocraticEngine, SocraticEngine
-from .theme import BG, FONTS, GUTTER, INK, MUTED, PRIMARY
-from .ui import T, snack
+from .theme import BG, FONTS, GUTTER, INK, MAX_W, MUTED, PRIMARY
+from .ui import FRAME_W, T, snack
 
 PREFS_KEY = "aura.profile"
 APP_VERSION = "1.0.0"
@@ -85,31 +85,46 @@ class AuraApp:
         page.padding = 0
         page.spacing = 0
         page.theme_mode = ft.ThemeMode.LIGHT
-        # Chuyển màn kiểu iPhone (trượt ngang, vuốt mép trái để quay lại) trên mọi nền tảng.
+        # Chuyển màn: iPhone/Mac trượt ngang kiểu iOS (vuốt mép trái để quay lại);
+        # Android/máy tính: mờ dần vào kiểu phòng trưng bày (Flutter tự chạy hiệu ứng, không tốn máy chủ).
         slide = ft.PageTransitionTheme.CUPERTINO
+        fade = ft.PageTransitionTheme.FADE_FORWARDS
         page.theme = ft.Theme(font_family="Inter", color_scheme_seed=PRIMARY,
                               scaffold_bgcolor=BG,
                               page_transitions=ft.PageTransitionsTheme(
-                                  android=slide, ios=slide, macos=slide, windows=slide,
-                                  linux=slide))
+                                  android=fade, ios=slide, macos=slide, windows=fade,
+                                  linux=fade))
         page.on_route_change = self._on_route_change
         page.on_view_pop = self._on_view_pop
         # Lúc mới mở, trình duyệt/điện thoại có thể báo bề rộng tạm (vd 164px) rồi mới báo bề rộng
         # thật: khi bề rộng đổi thì dựng lại các màn để ảnh/lưới tính theo đúng khổ màn hình.
-        self._laid_out_width = self.width
+        self._laid_out_width = self.page_width
         page.on_resize = self._on_resize
         # Dịch vụ của Flet: lưu trữ cục bộ và mở trình duyệt/URL.
         self.prefs = ft.SharedPreferences()
         self.launcher = ft.UrlLauncher()
+        # Điều hướng nhanh (xem go / _on_route_change):
+        #   _epoch  tăng khi dữ liệu dùng chung đổi (hồ sơ, tranh đã lưu) -> màn cũ trong stack dựng lại
+        #   _url    đường dẫn trình duyệt đang hiện (mình đã đẩy hoặc trình duyệt báo về)
+        #   _echo   đường dẫn mình vừa đẩy, chờ trình duyệt báo lại -> bỏ qua vì màn đã dựng sẵn
+        self._epoch = 0
+        self._url = page.route or "/"
+        self._echo: list[str] = []
         page.views.clear()
         self._on_route_change(None)
         page.run_task(self._restore_session)
 
     # ---- kích thước -----------------------------------------------------------
     @property
-    def width(self) -> float:
+    def page_width(self) -> float:
+        """Bề rộng thật của cửa sổ / màn hình."""
         w = self.page.width
         return float(w) if w else 402.0
+
+    @property
+    def width(self) -> float:
+        """Bề rộng cột nội dung: cả màn hình trên điện thoại, tối đa MAX_W trên máy tính."""
+        return min(self.page_width, MAX_W)
 
     @property
     def content_width(self) -> float:
@@ -117,7 +132,22 @@ class AuraApp:
 
     # ---- điều hướng -------------------------------------------------------------
     def go(self, route: str) -> None:
-        self.page.run_task(self.page.push_route, route)
+        """Chuyển màn. Dựng màn mới NGAY rồi mới báo trình duyệt đổi địa chỉ.
+
+        Trước đây chỉ đẩy địa chỉ (push_route) rồi chờ trình duyệt báo lại mới dựng màn: mỗi lần
+        bấm mất hai lượt đi-về máy chủ. Giờ chỉ còn một lượt."""
+        self._show(route)
+        self._sync_url(route)
+
+    def _sync_url(self, route: str) -> None:
+        if route != self._url:
+            self._url = route
+            self._echo.append(route)
+            self.page.run_task(self.page.push_route, route)
+
+    def touch(self) -> None:
+        """Đánh dấu dữ liệu dùng chung vừa đổi: các màn cũ trong stack sẽ dựng lại khi quay về."""
+        self._epoch += 1
 
     def back(self) -> None:
         views = self.page.views
@@ -147,11 +177,22 @@ class AuraApp:
             if path == prefix or (prefix.endswith("/") and prefix != "/" and path.startswith(prefix)):
                 args = [a for a in path[len(prefix):].split("/") if a] if prefix.endswith("/") else []
                 mod = importlib.import_module(f".screens.{module}", __package__)
-                view = getattr(mod, fn)(self, query, *args)
+                view = self._framed(getattr(mod, fn), query, *args)
                 view.route = route
+                view.data = self._epoch
                 return view
         mod = importlib.import_module(".screens.auth", __package__)
-        return mod.welcome(self, {})
+        view = self._framed(mod.welcome, {})
+        view.data = self._epoch
+        return view
+
+    def _framed(self, builder, query, *args) -> ft.View:
+        """Dựng màn với bề rộng cột đúng khổ màn hình (ui.screen đọc FRAME_W)."""
+        token = FRAME_W.set(self.width if self.page_width > MAX_W else None)
+        try:
+            return builder(self, query, *args)
+        finally:
+            FRAME_W.reset(token)
 
     def rebuild(self) -> None:
         """Dựng lại màn hình hiện tại (sau khi đổi trạng thái lớn)."""
@@ -161,9 +202,9 @@ class AuraApp:
             self.page.update()
 
     def _on_resize(self, e) -> None:
-        if abs(self.width - self._laid_out_width) < 1:     # chỉ đổi chiều cao (vd bật bàn phím)
+        if abs(self.page_width - self._laid_out_width) < 1:     # chỉ đổi chiều cao (vd bật bàn phím)
             return
-        self._laid_out_width = self.width
+        self._laid_out_width = self.page_width
         views = self.page.views
         for i, v in enumerate(list(views)):
             views[i] = self._build(v.route)
@@ -171,21 +212,37 @@ class AuraApp:
 
     def _on_route_change(self, e) -> None:
         route = self.page.route or "/"
+        if route in self._echo:        # trình duyệt báo lại địa chỉ do go() đẩy: màn đã dựng sẵn
+            del self._echo[:self._echo.index(route) + 1]
+            return
+        self._url = route              # người dùng bấm Back/Forward của trình duyệt, mở link...
+        self._show(route)
+
+    def _show(self, route: str) -> None:
         views = self.page.views
-        for i in range(len(views) - 1, -1, -1):          # quay lại màn đã có trong stack
-            if views[i].route == route:
+        for i in range(len(views) - 1, -1, -1):          # quay lại màn đã có trong stack: chỉ gỡ
+            if views[i].route == route:                  # các màn phía trên, không gửi lại cả màn
                 del views[i + 1:]
+                if views[i].data != self._epoch:         # dữ liệu đã đổi từ lúc dựng: dựng lại
+                    views[i] = self._build(route)
                 self.page.update()
                 return
-        if urlsplit(route).path in ROOT_ROUTES:
+        path = urlsplit(route).path
+        if path in ROOT_ROUTES:
+            # Tab chính: giữ sẵn Trang chủ ở đáy stack, để bấm "Khám phá" chỉ cần gỡ màn trên
+            # (gửi rất ít) thay vì dựng và gửi lại cả trang chủ dài.
+            home = views[0] if views and views[0].route == "/home" and path != "/" else None
             views.clear()
+            if home is not None:
+                views.append(home)
         views.append(self._build(route))
         self.page.update()
 
     async def _on_view_pop(self, e) -> None:
         if len(self.page.views) > 1:
             self.page.views.pop()
-            await self.page.push_route(self.page.views[-1].route)
+            self.page.update()
+            self._sync_url(self.page.views[-1].route)
 
     # ---- tiện ích -----------------------------------------------------------------
     def toggle_saved(self, pid: str) -> bool:
@@ -196,6 +253,7 @@ class AuraApp:
         else:
             saved.add(pid)
             snack(self.page, "Đã lưu tranh.")
+        self.touch()
         return pid in saved
 
     # ---- tài khoản ----------------------------------------------------------------
@@ -218,10 +276,12 @@ class AuraApp:
         except (ValueError, TypeError):
             return
         self.signed_in = True
+        self.touch()
         if urlsplit(self.page.route or "/").path == "/":
-            await self.page.push_route("/home")
+            self.go("/home")
 
     async def save_profile(self) -> None:
+        self.touch()               # tên / ảnh đại diện có thể đã đổi
         try:
             await self.prefs.set(PREFS_KEY, json.dumps(self.profile.to_dict(), ensure_ascii=False))
         except Exception:
@@ -230,6 +290,7 @@ class AuraApp:
     def complete_sign_in(self, profile: Profile) -> None:
         self.state.profile = profile
         self.signed_in = True
+        self.touch()
         self.page.run_task(self.save_profile)
         self.go("/home") 
 
@@ -344,10 +405,9 @@ class AuraApp:
                 pass
             self.state = AppState()
             self.signed_in = False
+            self.touch()
             self.page.views.clear()
-            await self.page.push_route("/")
-            if not self.page.views:
-                self._on_route_change(None)
+            self.go("/")
         self.page.run_task(_do)
 
     def open_url(self, url: str) -> None:

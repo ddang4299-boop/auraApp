@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import os
+from contextvars import ContextVar
 from typing import Callable, Optional, Sequence
 
 import flet as ft
 
-from .theme import (BEIGE, BG, BORDER, BUTTON_H, GUTTER, INK, INTER_BY_WEIGHT, MUTED,
-                    NAV_H, PRIMARY, RADIUS, SANS_LINE_HEIGHT, SERIF_LINE_HEIGHT, SURFACE,
-                    TINT, TOP_BAR_H, WHITE)
+from .theme import (BEIGE, BG, BLOB_GOLD, BLOB_ROSE, BORDER, BUTTON_H, GLASS, GLASS_EDGE,
+                    GLASS_LINE, GLASS_STRONG, GUTTER, INK, INTER_BY_WEIGHT, MUTED, NAV_H, PRIMARY,
+                    RADIUS, SANS_LINE_HEIGHT, SERIF_LINE_HEIGHT, SHADOW_INK, SURFACE, TINT,
+                    TOP_BAR_H, WHITE)
+
+# Bề rộng cột nội dung khi màn hình rộng hơn MAX_W (máy tính, iPad ngang). App đặt giá trị này
+# ngay trước khi dựng một màn (xem AuraApp._build); None = điện thoại, cột chiếm hết bề ngang.
+FRAME_W: ContextVar[Optional[float]] = ContextVar("aura_frame_w", default=None)
 
 # Khi chụp màn hình để so với bản mẫu, vẽ thêm thanh trạng thái iOS giả
 # (trên điện thoại thật hệ điều hành tự vẽ, SafeArea lo phần lề).
@@ -257,8 +263,8 @@ def bottom_nav(active: int, go: Callable[[str], None]) -> ft.Container:
         ))
     return ft.Container(
         content=ft.Row(items, spacing=0, vertical_alignment=ft.CrossAxisAlignment.START),
-        height=NAV_H, bgcolor=BG, padding=ft.Padding.only(left=GUTTER, right=GUTTER, top=9.5),
-        border=ft.Border.only(top=ft.BorderSide(1, BORDER)),
+        height=NAV_H, bgcolor=GLASS_STRONG, padding=ft.Padding.only(left=GUTTER, right=GUTTER, top=9.5),
+        border=ft.Border.only(top=ft.BorderSide(1, GLASS_LINE)),
     )
 
 
@@ -305,9 +311,34 @@ def body(controls: Sequence[ft.Control], *, scroll: bool = True, bottom: float =
                      horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
 
+def backdrop(content: ft.Control) -> ft.Container:
+    """Nền kem có vài vầng màu rất mờ (hồng đất, vàng nhạt) để lớp kính phía trên có chiều sâu.
+    Chỉ là gradient tĩnh, vẽ một lần: không tốn gì khi cuộn."""
+    layer = ft.Container(content, expand=True, gradient=ft.RadialGradient(
+        center=ft.Alignment(-1.1, 1.05), radius=0.95, colors=[BLOB_GOLD, f"{BLOB_GOLD},0"]))
+    layer = ft.Container(layer, expand=True, gradient=ft.RadialGradient(
+        center=ft.Alignment(1.15, -0.85), radius=0.8, colors=[BLOB_ROSE, f"{BLOB_ROSE},0"]))
+    return ft.Container(layer, expand=True, bgcolor=BG)
+
+
+def glass(content: ft.Control | None = None, *, radius: float = 16, padding=None, strong: bool = False,
+          shadow: bool = False, on_click: Handler = None, **kw) -> ft.Container:
+    """Khung kính mờ: nền trắng trong suốt, viền sáng mảnh, bóng nâu rất nhẹ (tuỳ chọn)."""
+    return ft.Container(
+        content, bgcolor=GLASS_STRONG if strong else GLASS, border_radius=radius, padding=padding,
+        border=ft.Border.all(1, GLASS_EDGE),
+        shadow=[ft.BoxShadow(blur_radius=22, spread_radius=-8, offset=ft.Offset(0, 8),
+                             color=f"{SHADOW_INK},0.16")] if shadow else None,
+        on_click=on_click, **kw)
+
+
 def screen(route: str, content: ft.Control, *, top: ft.Control | None = None,
-           footer: ft.Control | None = None, nav: ft.Control | None = None) -> ft.View:
-    """Lắp một màn hình hoàn chỉnh: (thanh trạng thái) + top bar + nội dung + footer + nav."""
+           footer: ft.Control | None = None, nav: ft.Control | None = None,
+           aside: ft.Control | None = None) -> ft.View:
+    """Lắp một màn hình hoàn chỉnh: (thanh trạng thái) + top bar + nội dung + footer + nav.
+
+    Màn hình rộng (máy tính): cột nội dung rộng tối đa MAX_W đặt giữa; nếu có `aside`
+    (vd tranh lớn ở màn chat) thì aside chiếm phần bên trái, cột nội dung bên phải."""
     parts: list[ft.Control] = []
     if MOCK_DEVICE:
         parts.append(_status_bar())
@@ -322,11 +353,22 @@ def screen(route: str, content: ft.Control, *, top: ft.Control | None = None,
         parts.append(_home_indicator())
     col = ft.Column(parts, spacing=0, expand=True,
                     horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
-    root: ft.Control = col if MOCK_DEVICE else ft.SafeArea(col, expand=True)
-    return ft.View(route=route, controls=[root], padding=0, spacing=0, bgcolor=BG)
+    fw = FRAME_W.get()
+    if fw:
+        main = ft.Container(col, width=fw)
+        if aside is not None:
+            layout: ft.Control = ft.Row([ft.Container(aside, expand=True), main], spacing=0,
+                                        vertical_alignment=ft.CrossAxisAlignment.STRETCH, expand=True)
+        else:
+            layout = ft.Row([main], spacing=0, alignment=ft.MainAxisAlignment.CENTER,
+                            vertical_alignment=ft.CrossAxisAlignment.STRETCH, expand=True)
+    else:
+        layout = col
+    root: ft.Control = layout if MOCK_DEVICE else ft.SafeArea(layout, expand=True)
+    return ft.View(route=route, controls=[backdrop(root)], padding=0, spacing=0, bgcolor=BG)
 
 
-def card(content: ft.Control, *, bgcolor: str = WHITE, border: str | None = BORDER,
+def card(content: ft.Control, *, bgcolor: str = GLASS, border: str | None = GLASS_EDGE,
          padding=None, radius: float = RADIUS, on_click: Handler = None, **kw) -> ft.Container:
     return ft.Container(content, bgcolor=bgcolor,
                         border=ft.Border.all(1, border) if border else None,

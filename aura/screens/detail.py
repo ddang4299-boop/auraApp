@@ -4,7 +4,7 @@ from __future__ import annotations
 import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS
-from ..theme import BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
+from ..theme import GLASS, GLASS_EDGE, GLASS_STRONG, BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
 from ..ui import (H, T, V, body, bottom_nav, cropped_image, icon, kicker, screen, top_bar)
 
 ZOOMS = [1, 2, 3, 4]
@@ -61,7 +61,7 @@ def build(app, q, pid: str = DEFAULT_ID, key: str = "") -> ft.View:
         H(12), zoom_label, H(12),
         ft.Container(icon("plus", 18, INK), on_click=lambda e: change(1), padding=4),
     ], spacing=0, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        height=39.5, bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=20,
+        height=39.5, bgcolor=GLASS_STRONG, border=ft.Border.all(1, GLASS_EDGE), border_radius=20,
         padding=ft.Padding.symmetric(horizontal=12))
     content = body([
         V(23.5),
@@ -79,7 +79,7 @@ def build(app, q, pid: str = DEFAULT_ID, key: str = "") -> ft.View:
             ft.Column([T("Vị trí trong bức tranh", 13, 600, INK), V(6.5),
                        T(d.location, 11, 400, MUTED)], spacing=0, tight=True, expand=True),
         ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            bgcolor=BEIGE, border_radius=RADIUS, padding=ft.Padding.only(left=12, right=12, top=13, bottom=11.5)),
+            bgcolor=GLASS, border=ft.Border.all(1, GLASS_EDGE), border_radius=12, padding=ft.Padding.only(left=12, right=12, top=13, bottom=11.5)),
         V(23),
         T(d.note, 14, 400, MUTED),
         V(12.5),

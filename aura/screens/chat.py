@@ -9,85 +9,49 @@ import time
 import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS, Painting
-from ..socratic import STAGES, AuraTurn, Choice, Message
-from ..theme import BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, TINT, WHITE
-from ..ui import (H, T, V, body, bottom_nav, bottom_sheet, cropped_image, icon, kicker, logo, screen,
+from ..socratic import STAGES, AuraTurn, Choice, Info, Message
+from ..theme import (BORDER, GLASS, GLASS_EDGE, GLASS_LINE, INK, MUTED, PRIMARY, SHADOW_INK, TINT,
+                     WHITE, WIDE_W, WINE_LIGHT)
+from ..ui import (H, T, V, body, bottom_nav, bottom_sheet, cropped_image, glass, icon, logo, screen,
                   source_line, surface_field, top_bar)
+from .viewer import gallery_wall, open_viewer
+
+INFO_BG = "#F3EADB,0.86"     # thẻ tư liệu: be ấm, hơi đậm hơn bong bóng AURA
 
 ABOUT = ("AURA không đưa ra đáp án ngay. Theo phương pháp Socrates, AURA đặt câu hỏi để bạn tự "
          "quan sát, tách điều nhìn thấy khỏi điều suy đoán, rồi đối chiếu với nguồn của bảo tàng. "
          "Cuộc trò chuyện đi qua bốn chặng: Ấn tượng đầu → Tách chi tiết → Đối thoại → Mở rộng.")
 
 
-def _painting_viewer(app, p: Painting) -> None:
-    """Xem toàn bộ bức tranh ngay trong lúc chat (bảng trượt từ dưới lên, phóng to được).
-
-    Không chuyển trang nên đóng lại vẫn ở đúng chỗ đang trò chuyện.
-    """
-    cw = app.content_width
-    max_h = (app.page.height or 874) * 0.58
-    w = min(cw, max_h * p.aspect)
-    h = w / p.aspect
-
-    def close(e=None):
-        app.page.pop_dialog()
-
-    def open_detail(key: str):
-        app.page.pop_dialog()
-        app.go(f"/detail/{p.id}/{key}")
-
-    chips = [ft.Container(T(d.title, 11, 600, PRIMARY, no_wrap=True, lh=1.2), bgcolor=TINT,
-                          border_radius=14, padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                          on_click=lambda e, k=d.key: open_detail(k))
-             for d in p.details.values()]
-    app.page.show_dialog(ft.BottomSheet(
-        ft.Container(ft.Column([
-            ft.Row([
-                ft.Column([T(p.title, 20, 400, INK, serif=True, max_lines=1), V(3),
-                           T(f"{p.artist} · {p.year}", 11, 400, MUTED, max_lines=1)],
-                          spacing=0, tight=True, expand=True),
-                ft.Container(icon("x", 22, INK), on_click=close, padding=4),
-            ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START),
-            V(14),
-            ft.Container(
-                ft.InteractiveViewer(ft.Image(src=p.image, width=w, height=h, fit=ft.BoxFit.FILL),
-                                     min_scale=1, max_scale=5, boundary_margin=0),
-                width=w, height=h, border_radius=4, clip_behavior=ft.ClipBehavior.HARD_EDGE),
-            V(8),
-            T("Chụm hai ngón tay để phóng to, kéo để di chuyển", 10, 400, MUTED),
-            V(14),
-            T("NHÌN KỸ MỘT CHI TIẾT", 9, 400, PRIMARY, ls=0.9),
-            V(8),
-            ft.Row(chips, spacing=6, run_spacing=6, wrap=True),
-        ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.Padding.only(left=24, right=24, top=18, bottom=24)),
-        bgcolor=BG_OFF, scrollable=True, draggable=False, show_drag_handle=False,
-    ))
-
-
 def _painting_button(app, p: Painting) -> ft.Control:
-    """Ảnh tranh nhỏ cạnh ô nhập: chạm để xem tranh mà không phải cuộn lên đầu."""
+    """Ảnh tranh nhỏ cạnh ô nhập: chạm để xem tranh (phóng to được) mà không phải cuộn lên đầu."""
     return ft.Container(
         ft.Image(src=p.image, width=28, height=36, fit=ft.BoxFit.COVER),
         width=28, height=36, border_radius=4, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         border=ft.Border.all(1, BORDER), tooltip="Xem tranh",
-        on_click=lambda e: _painting_viewer(app, p))
+        on_click=lambda e: open_viewer(app, p))
 
 
 def _context_card(app, p: Painting) -> ft.Control:
-    return ft.Container(ft.Row([
-        ft.Image(src=p.image, width=36, height=48, fit=ft.BoxFit.COVER),
-        H(32),
+    """Thẻ kính "Đang cùng khám phá": ảnh tranh có khung + tên tranh (chữ có chân)."""
+    return glass(ft.Row([
+        ft.Container(ft.Image(src=p.image, width=40, height=54, fit=ft.BoxFit.COVER),
+                     border=ft.Border.all(2, WHITE), border_radius=3,
+                     clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                     shadow=[ft.BoxShadow(blur_radius=8, offset=ft.Offset(0, 2),
+                                          color=f"{SHADOW_INK},0.18")]),
+        H(16),
         ft.Column([
-            T("ĐANG CÙNG KHÁM PHÁ", 9, 400, PRIMARY, ls=0.9),
-            V(1.2),
-            T(p.title, 12, 600, INK, max_lines=1),
-            V(3.5),
+            T("ĐANG CÙNG KHÁM PHÁ", 9, 600, PRIMARY, ls=1.0),
+            V(3),
+            T(p.title, 18, 400, INK, serif=True, max_lines=1),
+            V(2),
             T(f"{p.artist} · {p.year} · {p.museum}", 10, 400, MUTED, max_lines=1),
         ], spacing=0, tight=True, expand=True),
+        H(8), icon("maximize-2", 18, PRIMARY),
     ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        bgcolor=BEIGE, border_radius=RADIUS, height=74, padding=ft.Padding.only(left=32, right=12),
-        on_click=lambda e: _painting_viewer(app, p))
+        radius=14, padding=ft.Padding.only(left=14, right=14, top=10, bottom=10),
+        on_click=lambda e: open_viewer(app, p))
 
 
 def _stage_chips(stage: int) -> ft.Row:
@@ -96,12 +60,10 @@ def _stage_chips(stage: int) -> ft.Row:
         on = i <= stage
         chips.append(ft.Container(
             T(name, 10, 600, WHITE if on else PRIMARY, no_wrap=True, lh=1.2),
-            padding=ft.Padding.symmetric(horizontal=7, vertical=7.5), border_radius=14,
-            bgcolor=PRIMARY if on else BG_OFF, border=None if on else ft.Border.all(1, BORDER)))
+            padding=ft.Padding.symmetric(horizontal=8, vertical=7.5), border_radius=14,
+            bgcolor=PRIMARY if on else GLASS, border=None if on else ft.Border.all(1, GLASS_EDGE),
+            animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT)))
     return ft.Row(chips, spacing=4, wrap=True, run_spacing=4)
-
-
-BG_OFF = "#F6F2E8"
 
 
 def _aura_header() -> ft.Control:
@@ -111,85 +73,105 @@ def _aura_header() -> ft.Control:
                   spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
 
-def _user_bubble(text: str) -> ft.Control:
+def _user_bubble(text: str, max_w: float) -> ft.Control:
+    """Bong bóng người dùng: nền đỏ rượu chuyển sắc, bên phải. Bề rộng ước theo độ dài chữ
+    để câu ngắn ("Có") không bị kéo thành bong bóng to."""
+    longest = max((len(x) for x in text.splitlines()), default=0)
+    w = max(64.0, min(max_w, 34 + longest * 7.4))
     return ft.Row([
         ft.Container(
-            T(text, 14, 400, WHITE), bgcolor=PRIMARY,
-            padding=ft.Padding.only(left=15, right=11, top=13.5, bottom=16),
-            border_radius=ft.BorderRadius.only(top_left=16, top_right=16, bottom_left=16,
-                                               bottom_right=2),
-            width=290,
+            T(text, 14, 400, WHITE), width=w,
+            gradient=ft.LinearGradient(begin=ft.Alignment.TOP_LEFT, end=ft.Alignment.BOTTOM_RIGHT,
+                                       colors=[WINE_LIGHT, PRIMARY]),
+            padding=ft.Padding.only(left=15, right=13, top=11, bottom=12),
+            border_radius=ft.BorderRadius.only(top_left=18, top_right=18, bottom_left=18,
+                                               bottom_right=4),
         )], alignment=ft.MainAxisAlignment.END)
 
 
 def _choice(c: Choice, *, picked: bool, enabled: bool, on_click) -> ft.Control:
     return ft.Container(ft.Row([
-        T(c.label, 11, 400, PRIMARY, expand=True, lh=1.2),
+        T(c.label, 12, 500, PRIMARY, expand=True, lh=1.3),
         H(12), icon("arrow-up-right", 16, PRIMARY),
     ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        bgcolor=TINT if picked else None, border=ft.Border.all(1, BORDER), border_radius=23,
-        padding=ft.Padding.only(left=13, right=16, top=8, bottom=8),
+        bgcolor=TINT if picked else GLASS, border=ft.Border.all(1, GLASS_LINE if picked else GLASS_EDGE),
+        border_radius=23, padding=ft.Padding.only(left=14, right=16, top=9, bottom=9),
         on_click=on_click if enabled else None, ink=enabled,      # gợn sóng khi chạm
-        opacity=1.0 if (enabled or picked) else 0.55,
+        opacity=1.0 if (enabled or picked) else 0.5,
         animate_opacity=ft.Animation(220, ft.AnimationCurve.EASE_OUT))
 
 
-def _detail_card(app, p: Painting, att) -> ft.Control:
-    w = app.content_width - 16
+def _info_card(info: Info) -> ft.Control:
+    """Thẻ tư liệu AURA tra được trong kho tư liệu của tranh: nhãn, chủ đề (chữ có chân), nội dung."""
     return ft.Container(ft.Column([
-        V(6.2),
-        T(att.label.upper(), 9, 400, PRIMARY, ls=0.8),
-        V(6.2),
-        cropped_image(p.image, p.aspect, w, 180, att.crop, radius=4,
-                      on_click=lambda e: app.go(f"/detail/{p.id}/{att.detail_key}")),
+        ft.Row([icon("book-open", 13, PRIMARY), H(6), T("TƯ LIỆU", 9, 600, PRIMARY, ls=1.1)],
+               spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        V(6),
+        T(info.topic, 16, 400, INK, serif=True),
+        V(5),
+        T(info.text, 13, 400, INK),
+    ], spacing=0, tight=True), bgcolor=INFO_BG, border=ft.Border.all(1, GLASS_EDGE),
+        border_radius=12, padding=ft.Padding.only(left=14, right=14, top=11, bottom=13))
+
+
+def _detail_card(app, p: Painting, att) -> ft.Control:
+    w = app.content_width - 18
+    return glass(ft.Column([
+        T(att.label.upper(), 9, 600, PRIMARY, ls=0.9),
         V(7),
+        cropped_image(p.image, p.aspect, w - 2, 180, att.crop, radius=6,
+                      on_click=lambda e: app.go(f"/detail/{p.id}/{att.detail_key}")),
+        V(8),
         ft.Container(ft.Row([T("Xem toàn bộ chi tiết", 11, 600, PRIMARY), H(12),
                              icon("arrow-up-right", 16, PRIMARY)], spacing=0, tight=True),
                      bgcolor=TINT, height=30, border_radius=15,
                      padding=ft.Padding.only(left=12, right=12), alignment=ft.Alignment.CENTER_LEFT,
                      on_click=lambda e: app.go(f"/detail/{p.id}/{att.detail_key}")),
-        V(8),
-    ], spacing=0, tight=True), bgcolor=BEIGE, border_radius=RADIUS,
-        padding=ft.Padding.symmetric(horizontal=8))
+    ], spacing=0, tight=True), radius=14, padding=ft.Padding.only(left=8, right=8, top=10, bottom=10))
 
 
 def _summary_card(app, p: Painting, s) -> ft.Control:
-    return ft.Container(ft.Column([
-        T(s.title, 14, 600, INK),
+    return glass(ft.Column([
+        T(s.title, 18, 400, INK, serif=True),
         V(7.5),
-        T(s.text, 12, 400, INK),
+        T(s.text, 13, 400, INK),
         V(12),
         ft.Container(ft.Row([T(s.action, 13, 600, WHITE), ft.Container(expand=True),
                              icon("arrow-up-right", 18, WHITE)], spacing=0),
                      height=40, bgcolor=PRIMARY, border_radius=20,
                      padding=ft.Padding.only(left=16, right=19), alignment=ft.Alignment.CENTER_LEFT,
                      on_click=lambda e: app.go(f"/quiz/{p.id}")),
-    ], spacing=0, tight=True), bgcolor=BEIGE, border_radius=RADIUS,
-        padding=ft.Padding.only(left=12, right=12, top=9, bottom=12))
+    ], spacing=0, tight=True), radius=14, padding=ft.Padding.only(left=14, right=14, top=12, bottom=14),
+        shadow=True)
 
 
 MIN_THINK = 0.6          # giây: "đang suy nghĩ" hiện đủ lâu để không chớp tắt
 DOT = 6
 # Hiệu ứng "đang gõ": mỗi lần hiện thêm chữ là một lần gửi cập nhật từ Python sang màn hình.
 # Khi app chạy trên máy chủ (Render), gửi quá dày sẽ nghẽn mạng/CPU -> giới hạn ~14 lần mỗi đoạn.
-TYPE_TICK = 0.06         # giây giữa hai lần hiện thêm chữ
+TYPE_TICK = 0.09         # giây giữa hai lần hiện thêm chữ (mỗi lần là một lượt gửi xuống trình duyệt)
 TYPE_PARA_MAX = 0.85     # một đoạn dài cỡ nào cũng gõ xong trong khoảng chừng này giây
 WORD_RE = re.compile(r"\S+\s*")
 
 
-# Chờ càng lâu thì dòng chữ đổi dần, để người dùng biết app vẫn đang chạy chứ không bị treo.
-THINK_LABELS = [(0, "AURA đang suy nghĩ"), (3, "AURA đang ngẫm kỹ câu của bạn"), (7, "Sắp xong rồi")]
+# Trạng thái đang xử lý. Thanh chạy là hiệu ứng của Flutter (chạy trên máy người xem, không tốn
+# máy chủ); dòng chữ chỉ đổi vài lần theo đúng các bước AURA đang làm.
+THINK_LABELS = [(0, "ĐANG PHÂN TÍCH CÂU TRẢ LỜI CỦA BẠN"),
+                (1.2, "ĐANG TRUY XUẤT TƯ LIỆU VỀ TÁC PHẨM"),
+                (3.5, "ĐANG SOẠN CÂU HỎI TIẾP THEO"),
+                (8, "SẮP XONG RỒI")]
 
 
-def _thinking() -> tuple[ft.Control, list[ft.Container], ft.Text]:
-    """Dòng "AURA đang suy nghĩ" với ba chấm nhấp nháy lần lượt."""
-    dots = [ft.Container(width=DOT, height=DOT, border_radius=DOT / 2, bgcolor=PRIMARY,
-                         opacity=0.25, animate_opacity=ft.Animation(260, ft.AnimationCurve.EASE_IN_OUT))
-            for _ in range(3)]
-    label = T(THINK_LABELS[0][1], 12, 600, PRIMARY)
-    row = ft.Row([label, H(8), dots[0], H(4), dots[1], H(4), dots[2]],
-                 spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-    return row, dots, label
+def _thinking() -> tuple[ft.Control, ft.Text]:
+    """Khung kính nhỏ: nhãn trạng thái + thanh tiến trình mảnh màu đỏ rượu."""
+    label = T(THINK_LABELS[0][1], 9.5, 600, PRIMARY, ls=1.0, lh=1.2)
+    bar = ft.Container(ft.ProgressBar(bar_height=2.5, color=PRIMARY, bgcolor=TINT, border_radius=2),
+                       width=210)
+    box = glass(ft.Column([ft.Row([logo(12), H(10), label], spacing=0,
+                                  vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                           V(9), bar], spacing=0, tight=True),
+                radius=14, padding=ft.Padding.only(left=14, right=16, top=11, bottom=12))
+    return ft.Row([box], spacing=0), label
 
 
 def _appear(c: ft.Container) -> ft.Container:
@@ -208,15 +190,18 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
 
     stage_holder = ft.Container(_stage_chips(st.stage))
     scroller = ft.Ref[ft.Column]()
-    think_row, dots, think_label = _thinking()
-    think_box = ft.Container(ft.Column([V(14), think_row], spacing=0, tight=True),
+    think_row, think_label = _thinking()
+    cw = app.content_width
+    think_box = ft.Container(ft.Column([V(16), think_row], spacing=0, tight=True),
                              visible=st.thinking)
     # Mỗi tin nhắn là một khối riêng: tin mới chỉ THÊM khối mới, không vẽ lại cả cuộc trò chuyện.
     thread = ft.Column([think_box], spacing=0, tight=True,
                        horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
     blocks: dict[int, ft.Container] = {}
-    # Hiệu ứng gõ chữ: tin AURA mới hiện từng cụm từ; nút gợi ý/ảnh chi tiết hiện sau khi gõ xong.
-    typing: dict[int, tuple[list[ft.Text], ft.Container]] = {}   # i -> (các đoạn chữ, khối phần phụ)
+    # Hiệu ứng gõ chữ: tin AURA mới hiện từng cụm từ; thẻ tư liệu hiện khi gõ tới chỗ của nó;
+    # nút gợi ý/ảnh chi tiết hiện sau khi gõ xong.
+    # i -> (các đoạn chữ, khối phần phụ, khối thẻ tư liệu)
+    typing: dict[int, tuple[list[ft.Text], ft.Container, ft.Container | None]] = {}
     fade_in: set[int] = set()
 
     def last_aura() -> int:
@@ -226,7 +211,7 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         m = st.messages[i]
         prev = st.messages[i - 1].role if i else None
         if m.role == "user":
-            items = [V(12.5 if prev == "aura" else 9), _user_bubble(m.text)]
+            items = [V(14 if prev == "aura" else 9), _user_bubble(m.text, cw * 0.82)]
         else:
             first = next(j for j, x in enumerate(st.messages) if x.role == "aura")
             items = [V(17.8 if prev is None else 14),
@@ -274,18 +259,20 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
             pass
 
     async def pulse() -> None:
-        k, t0 = 0, time.monotonic()
+        """Đổi dòng trạng thái theo thời gian chờ. Chỉ gửi cập nhật khi chữ đổi (vài lần mỗi lượt),
+        thanh chạy thì Flutter tự vẽ."""
+        t0, shown = time.monotonic(), THINK_LABELS[0][1]
+        think_label.value = shown
         while st.thinking and think_box.visible:
             waited = time.monotonic() - t0
-            think_label.value = [s for after, s in THINK_LABELS if waited >= after][-1]
-            for j, d in enumerate(dots):
-                d.opacity = 1.0 if j == k % 3 else 0.25
-            try:
-                think_row.update()
-            except Exception:
-                return
-            k += 1
-            await asyncio.sleep(0.3)
+            label = [s for after, s in THINK_LABELS if waited >= after][-1]
+            if label != shown:
+                shown = think_label.value = label
+                try:
+                    think_label.update()
+                except Exception:
+                    return
+            await asyncio.sleep(0.25)
 
     def set_thinking(on: bool) -> None:
         st.thinking = on
@@ -293,29 +280,57 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
 
     def _aura_block(i: int, m: Message, interactive: bool, header: bool) -> list[ft.Control]:
         t: AuraTurn = m.turn
+        typed = i in typing
         # Tên "AURA" chỉ giới thiệu một lần ở tin nhắn đầu, các lượt sau không lặp lại.
         out: list[ft.Control] = [_aura_header(), V(10.3)] if header else []
+        inner: list[ft.Control] = []
         texts: list[ft.Text] = []
+        info_box = None
+        if t.infos:
+            cards: list[ft.Control] = []
+            for k, info in enumerate(t.infos):
+                cards += [V(8) if k else V(0), _info_card(info)]
+            info_box = ft.Container(ft.Column(cards, spacing=0, tight=True,
+                                              horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+                                    visible=not typed, opacity=0 if typed else 1,
+                                    animate_opacity=ft.Animation(360, ft.AnimationCurve.EASE_OUT))
+        last = len(t.paragraphs) - 1
         for k, para in enumerate(t.paragraphs):
-            if k:
-                out.append(V(8))
-            texts.append(T("" if i in typing else para, 14, 400, INK))
-            out.append(texts[-1])
+            if t.infos and k == t.info_at:
+                inner += [V(10) if inner else V(0), info_box, V(12)]
+            elif k:
+                inner.append(V(9))
+            # Câu hỏi gợi mở (đoạn cuối, khi cuộc trò chuyện chưa kết thúc) nổi bật màu đỏ rượu.
+            question = k == last and not t.done and para.rstrip().endswith("?")
+            texts.append(T("" if typed else para, 14, 500 if question else 400,
+                           PRIMARY if question else INK))
+            inner.append(texts[-1])
+        if t.infos and t.info_at >= len(t.paragraphs):
+            inner += [V(10) if inner else V(0), info_box]
+        bubble = glass(ft.Column(inner, spacing=0, tight=True,
+                                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
+                       radius=18, padding=ft.Padding.only(left=15, right=15, top=13, bottom=14),
+                       margin=ft.Margin.only(right=18))
+        bubble.border_radius = ft.BorderRadius.only(top_left=4, top_right=18, bottom_left=18,
+                                                    bottom_right=18)
         # Phần phụ (ảnh chi tiết, nút gợi ý, thẻ tổng kết, nguồn) gom vào một khối để hiện sau chữ.
         extras = _aura_extras(i, t, interactive)
         box = ft.Container(ft.Column(extras, spacing=0, tight=True,
                                      horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
-                           visible=i not in typing, opacity=0 if i in fade_in else 1,
+                           visible=not typed, opacity=0 if i in fade_in else 1,
                            animate_opacity=ft.Animation(320, ft.AnimationCurve.EASE_OUT))
-        if i in typing:
-            typing[i] = (texts, box)
-        return out + [box]
+        if typed:
+            typing[i] = (texts, box, info_box)
+        return out + [bubble, box]
 
     async def type_out(i: int) -> None:
         """Hiện chữ của tin AURA thứ i dần dần theo từng cụm từ, như đang gõ."""
-        texts, box = typing[i]
-        paras = st.messages[i].turn.paragraphs
-        for txt, para in zip(texts, paras):
+        texts, box, info_box = typing[i]
+        turn = st.messages[i].turn
+        for k, (txt, para) in enumerate(zip(texts, turn.paragraphs)):
+            if info_box is not None and k == turn.info_at:
+                if not await show_info(info_box):
+                    return
             words = WORD_RE.findall(para)
             per_tick = max(1, math.ceil(len(words) * TYPE_TICK / TYPE_PARA_MAX))
             for n in range(per_tick, len(words) + per_tick, per_tick):
@@ -326,6 +341,9 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
                     return
                 await asyncio.sleep(TYPE_TICK)
             txt.value = para
+        if info_box is not None and turn.info_at >= len(turn.paragraphs):
+            if not await show_info(info_box):
+                return
         typing.pop(i, None)
         st.thinking = False
         fade_in.add(i)
@@ -336,6 +354,19 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         if i in blocks:
             blocks[i].content.controls[-1].opacity = 1
             app.page.update()
+
+    async def show_info(info_box: ft.Container) -> bool:
+        """Thẻ tư liệu hiện ra mờ -> rõ (hiệu ứng chạy trên máy người xem)."""
+        info_box.visible = True
+        try:
+            info_box.update()
+            await asyncio.sleep(0.03)
+            info_box.opacity = 1
+            info_box.update()
+        except Exception:
+            return False
+        await asyncio.sleep(0.35)
+        return True
 
     def _aura_extras(i: int, t: AuraTurn, interactive: bool) -> list[ft.Control]:
         out: list[ft.Control] = []
@@ -358,8 +389,18 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
 
     async def send(text: str, msg_index: int | None = None, choice: int | None = None):
         text = (text or "").strip()
-        if not text or st.thinking:
+        if not text:
             return
+        if st.thinking:
+            if msg_index is not None:      # bấm nút gợi ý cũ lúc đang bận: bỏ qua
+                return
+            # Gõ tin khi AURA đang trả lời: xếp hàng, gửi ngay khi AURA xong (không làm mất tin).
+            waited = 0.0
+            while st.thinking and waited < 30:
+                await asyncio.sleep(0.1)
+                waited += 0.1
+            if st.thinking:
+                return
         last = st.messages[-1].turn if st.messages and st.messages[-1].role == "aura" else None
         if last is not None and last.done:
             return
@@ -397,7 +438,7 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         await show_typed(len(st.messages) - 1, scroll_key=f"m{len(st.messages) - 2}")
 
     async def show_typed(i: int, scroll_key: str | None = None) -> None:
-        typing[i] = ([], ft.Container())
+        typing[i] = ([], ft.Container(), None)
         try:
             new = sync(animate=True)
             app.page.update()
@@ -449,20 +490,22 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         await send(text)
 
     field.on_submit = submit
-    composer = ft.Container(ft.Row([
+    composer = glass(ft.Row([
         _painting_button(app, p), H(10),
         field, H(10),
-        ft.Container(icon("arrow-up", 16, WHITE), width=30, height=30, border_radius=15,
-                     bgcolor=PRIMARY, alignment=ft.Alignment.CENTER, on_click=submit),
+        ft.Container(icon("arrow-up", 16, WHITE), width=32, height=32, border_radius=16,
+                     gradient=ft.LinearGradient(begin=ft.Alignment.TOP_LEFT, end=ft.Alignment.BOTTOM_RIGHT,
+                                                colors=[WINE_LIGHT, PRIMARY]),
+                     alignment=ft.Alignment.CENTER, on_click=submit),
     ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=26,
-        padding=ft.Padding.only(left=10, right=10, top=8, bottom=8), height=52)
+        strong=True, shadow=True, radius=26,
+        padding=ft.Padding.only(left=10, right=10, top=8, bottom=8), height=54)
 
     content = body([
         V(14),
         _context_card(app, p),
         V(18.2),
-        T("TIẾN TRÌNH TRÒ CHUYỆN", 9, 400, PRIMARY, ls=0.9),
+        T("TIẾN TRÌNH TRÒ CHUYỆN", 9, 600, PRIMARY, ls=1.0),
         V(8.2),
         stage_holder,
         thread,
@@ -470,7 +513,9 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
     footer = ft.Container(composer, padding=ft.Padding.only(left=24, right=24, top=10, bottom=20.5))
     sync(animate=False)                    # tin nhắn cũ (khi quay lại màn chat) hiện ngay
     app.page.run_task(start)
+    # Máy tính / màn hình rộng: tranh lớn treo bên trái (phóng to được), cuộc trò chuyện bên phải.
+    aside = gallery_wall(app, p) if app.page_width >= WIDE_W else None
     return screen(f"/chat/{p.id}", content,
                   top=top_bar("Hỏi Aura", on_back=app.back_handler, trailing="info",
                               on_trailing=lambda e: bottom_sheet(app.page, "AURA hỏi, bạn nhìn", ABOUT)),
-                  footer=footer, nav=bottom_nav(1, app.go))
+                  footer=footer, nav=bottom_nav(1, app.go), aside=aside)

@@ -41,8 +41,16 @@ EXIT_KW = ["thoát", "kết thúc", "dừng lại", "dừng nhé", "mình dừng
 UNSURE_KW = ["không biết", "không chắc", "chưa chắc", "không rõ", "khó nói", "chịu"]
 # Câu hỏi / lời đề nghị cung cấp thông tin (vd "mình muốn biết về bối cảnh...")
 QUESTION_RE = re.compile(r"\?|là gì|là ai|vì sao|khi nào|tại sao|sao lại|muốn biết|muốn tìm hiểu|"
-                         r"muốn khám phá về|kể cho|cho mình biết|cho tôi biết|giải thích")
-LIMIT_MSG = "Phần này mình chưa có thông tin đáng tin cậy để trả lời, nên mình xin không suy đoán."
+                         r"muốn khám phá về|kể cho|cho mình biết|cho tôi biết|giải thích|bao nhiêu|ở đâu|"
+                         r"bao giờ|như thế nào|ra sao|phải không|đúng không|có phải|hay không|(^|\s)ai(\s|$)|"
+                         r"\bcó\b.*\bkhông\s*$")
+# Câu có dấu "?" nhưng thật ra là ý kiến của người dùng (vd "Mình nghĩ cô ấy đang buồn?")
+HEDGE_RE = re.compile(r"có lẽ|có thể là|chắc là|hình như|theo (mình|tôi|em|tớ)|"
+                      r"(mình|tôi|em|tớ|tui) (nghĩ|thấy|đoán|cảm thấy|cho là)", re.I)
+LIMIT_MSG = ("Câu này nằm ngoài phần tư liệu mình có về bức tranh, nên mình xin không đoán. "
+             "Mình cùng quay lại câu hỏi đang dở nhé.")
+OFFTOPIC_MSG = "Mình ghi nhận nhé. Mình cùng quay lại câu hỏi đang dở."
+BRIDGE_Q = "Điều vừa đọc gợi cho bạn thêm suy nghĩ gì về những gì bạn đã quan sát?"
 UNSURE_ACKS = ["Không sao, bạn cứ nói điều đầu tiên bạn nhận ra nhé.",
                "Không sao, bạn thử chọn một câu gợi ý bên dưới cũng được."]
 OPENING_TEXT = "Bạn mong muốn tìm hiểu gì về bức tranh này?"
@@ -94,14 +102,13 @@ Schema đầu ra (mọi khóa đều phải có):
  "detail_tags": ["chi tiết họ nhắc, 1-3 từ mỗi mục"],
  "color_light": true nếu họ nhắc màu sắc/ánh sáng,
  "emotion_letter": chỉ khi extra_tasks có emotion_letter (chọn mã cảm xúc gần nhất), còn lại null,
- "asks_context": [mã C trong allowed.contexts mà họ đang HỎI muốn biết],
- "asks_unknown": true nếu họ hỏi thông tin về tranh/họa sĩ không nằm trong allowed.contexts,
+ "asks_context": [mọi mã C trong allowed.contexts có NỘI DUNG trả lời được (dù chỉ một phần) điều họ đang hỏi; vd hỏi người mẫu giàu hay nghèo, quý tộc hay dân thường thì chọn mã có nói về gia đình/địa vị của bà],
+ "asks_unknown": true nếu họ hỏi thông tin mà KHÔNG nội dung nào trong allowed.contexts trả lời được,
  "conditional_hit": bool (chỉ khi extra_tasks có conditional_hit),
  "wants_alternative": bool (chỉ khi extra_tasks có wants_alternative),
  "context_trigger_hit": bool (chỉ khi extra_tasks có context_trigger_hit),
  "depth": 0 chưa nêu gì | 1 chỉ nhận thấy/mô tả | 2 tự diễn giải có lý do | 3 kết nối bản thân/thông điệp,
- "bridge": "1 câu hỏi ngắn nối context vừa hiện với điều họ đã quan sát; chỉ khi asks_context không rỗng và answers_current=false, ngược lại chuỗi rỗng",
- "feedback": "Chỉ khi answers_current=true và họ nêu ý kiến: 1-2 câu tiếng Việt (xưng 'mình', gọi 'bạn') PHẢN HỒI ĐÚNG ĐIỀU HỌ VỪA NÓI: gọi tên cụ thể điều họ nhận ra, chỉ ra điểm tinh ý hoặc cơ sở trong nhận xét đó. Chỉ được dùng thông tin về tranh có trong current_question.insight; không đặt câu hỏi, không có dấu '?', không khen sáo rỗng, không phán đúng/sai. Các trường hợp khác: chuỗi rỗng"
+ "feedback": "Chỉ khi answers_current=true và họ nêu ý kiến: 1-2 câu tiếng Việt (xưng 'mình', gọi 'bạn') PHẢN HỒI ĐÚNG ĐIỀU HỌ VỪA NÓI: gọi tên cụ thể điều họ nhận ra, chỉ ra điểm tinh ý hoặc cơ sở trong nhận xét đó. Chỉ được dùng thông tin về tranh có trong current_question.insight (không nhắc tới chữ 'insight' hay 'ghi chú'); không đặt câu hỏi, không có dấu '?', không khen sáo rỗng, không phán đúng/sai. Các trường hợp khác: chuỗi rỗng"
 }
 Ngoại lệ duy nhất cho quy tắc "không cung cấp kiến thức": trường feedback được dùng thông tin trong current_question.insight."""
 
@@ -179,11 +186,18 @@ class Engine:
         s["turn"] += 1
         qn = self._view(node)
         opt, text = self._parse_input(qn, user_input)
-        if text in {c["text"] for c in self._chips(s, node) if c["kind"] == "prompt"}:
+        from_chip = text in {c["text"] for c in self._chips(s, node) if c["kind"] == "prompt"}
+        if from_chip:
             s["chips_sent"].append(text)      # chip đã dùng thì không đề xuất lại
-        sig = self._interpret(s, node, qn, opt, text)
+        sig = self._interpret(s, node, qn, opt, text, use_llm=not from_chip)
+        if from_chip and not sig["asks_context"] and node["id"] != "OPENING":
+            # chip gợi ý là câu trả lời mẫu (vd "Đầu tiên nên nhìn vào ánh sáng?"), dù có dấu "?"
+            sig["answers_current"], sig["asks_unknown"] = True, False
         if node["id"] == "OPENING":           # mọi thứ user nói ở đây đều là câu trả lời "muốn tìm hiểu gì"
             sig["answers_current"] = not sig["asks_unknown"]
+            low = text.lower()
+            if QUESTION_RE.search(low) and not HEDGE_RE.search(low):
+                sig["emotion_letter"] = None  # đang HỎI về tranh, không phải kể cảm xúc (AI hay đoán nhầm)
         s["history"].append({"role": "user", "content": text})
 
         if sig["wants_exit"] and not opt:
@@ -208,13 +222,15 @@ class Engine:
             s["node"] = self._resolve(s, node["after"], node, sig)
             return self._pack(s, ack, contexts, sig=sig)
 
-        # ---- user hỏi ngược, chưa trả lời câu hiện tại ----
+        # ---- user hỏi ngược / nói chuyện khác, chưa trả lời câu hiện tại: KHÔNG coi là câu trả lời ----
         if not sig["answers_current"] and not opt:
-            if sig["asks_unknown"] and not contexts:
+            if not contexts:
+                # không có tư liệu: nói rõ giới hạn (hoặc ghi nhận), giữ nguyên câu hỏi đang dở
                 self._rotate(s, node)
-                return self._pack(s, LIMIT_MSG, [], sig=sig)   # nói rõ giới hạn, giữ nguyên node
+                asked = sig["asks_unknown"] or QUESTION_RE.search(text.lower())
+                return self._pack(s, LIMIT_MSG if asked else OFFTOPIC_MSG, [], sig=sig)
             if contexts:
-                bridge = self._valid_q(sig["bridge"]) or "Điều vừa đọc gợi cho bạn thêm suy nghĩ gì về những gì bạn đã quan sát?"
+                bridge = BRIDGE_Q     # câu cố định: câu nối do AI viết đôi khi lạc đề
                 resume = node.get("resume") if node.get("id") == "BRIDGE" else node
                 s["node"] = {"type": "virtual", "id": "BRIDGE", "stage": "VIRTUAL", "branch": None,
                              "text": bridge, "input_type": "choice_with_free_input",
@@ -373,15 +389,32 @@ class Engine:
                 "asks_context": [], "asks_unknown": False, "conditional_hit": False, "wants_alternative": False,
                 "context_trigger_hit": False, "depth": 0, "bridge": "", "feedback": ""}
 
-    def _interpret(self, s, node, qn, opt, text) -> dict:
+    def _interpret(self, s, node, qn, opt, text, use_llm: bool = True) -> dict:
         sig = None
-        if self.llm and not opt:          # bấm nút/gợi ý điều hướng: không cần LLM
+        # bấm nút/gợi ý (câu có sẵn, luật từ khoá đã hiểu đúng): không cần LLM -> nhanh, đỡ tốn lượt AI
+        if self.llm and not opt and use_llm:
             sig = self._llm_sig(s, node, qn, text)
+            if sig is not None:
+                self._merge_heuristic(sig, qn, text)
         if sig is None:
             sig = self._heuristic(qn, opt, text)
         if opt:
             sig["nearest_option_id"], sig["answers_current"], sig["wants_exit"] = opt["id"], True, False
         return sig
+
+    def _merge_heuristic(self, sig: dict, qn: dict, text: str) -> None:
+        """Bù chỗ model AI miễn phí hay sai bằng luật từ khoá chắc chắn:
+        - câu hỏi có từ khoá tư liệu (vd "giàu", "quý tộc") mà AI không chọn tư liệu -> vẫn hiện tư liệu;
+        - ý kiến nói kèm "?" (vd "có lẽ vì cô ấy giữ ý?") hoặc khớp hẳn một lựa chọn -> là câu trả lời."""
+        h = self._heuristic(qn, None, text)
+        if HEDGE_RE.search(text.lower()) or h["nearest_option_id"]:
+            sig["answers_current"] = True
+            sig["asks_unknown"] = False
+        elif not h["answers_current"]:                  # luật từ khoá cũng thấy đây là câu hỏi
+            sig["answers_current"] = False
+            if h["asks_context"]:
+                sig["asks_context"] = list(dict.fromkeys(sig["asks_context"] + h["asks_context"]))
+                sig["asks_unknown"] = False
 
     def _llm_sig(self, s, node, qn, text) -> Optional[dict]:
         extra = {}
@@ -402,7 +435,10 @@ class Engine:
             "recent_turns": s["history"][-6:],
             "known": {"selected_details": s["selected_details"][-5:], "initial_impression": s["initial_impression"]},
             "allowed": {"branches": {b: self.branches[b]["title"] for b in self.routing if b in self.branches},
-                        "contexts": {c: v["topic"] for c, v in self.contexts.items()}},
+                        # tên + điều kiện hiện (ngắn) thay vì cả nội dung: giữ mỗi lượt gọi AI ít token
+                        # (Groq miễn phí chỉ cho 8.000 token/phút)
+                        "contexts": {c: f'{v["topic"]} ({v.get("trigger_condition", "")})'.replace(" ()", "")
+                                     for c, v in self.contexts.items()}},
             "extra_tasks": extra,
         }
         user = json.dumps(payload, ensure_ascii=False)
@@ -437,7 +473,8 @@ class Engine:
             sig["depth"] = 0
         sig["bridge"] = str(data.get("bridge", "")).strip()
         fb = str(data.get("feedback", "")).strip()
-        sig["feedback"] = fb if fb and "?" not in fb and len(fb) <= 320 and not FORBIDDEN.search(fb) else ""
+        sig["feedback"] = fb if fb and "?" not in fb and len(fb) <= 320 and not FORBIDDEN.search(fb) \
+            and not re.search(r"insight|ghi chú|đúng là|bạn nói đúng|chính xác", fb, re.I) else ""
         return sig
 
     def _derive_ctx_keywords(self) -> dict:
@@ -474,8 +511,13 @@ class Engine:
             sig["nearest_option_id"] = near["id"] if near else None
             sig["wants_exit"] = any(k in t for k in EXIT_KW)
             sig["uncertain"] = any(k in t for k in UNSURE_KW)
-            sig["asks_context"] = [c for c, kws in self.ctx_kw.items() if any(k in t for k in kws)]
-            sig["answers_current"] = not (sig["asks_context"] and QUESTION_RE.search(t))
+            # Là câu hỏi ngược (không phải câu trả lời) khi: có dạng câu hỏi, không khớp lựa chọn nào,
+            # và không phải ý kiến nói kèm dấu "?" (vd "mình nghĩ là buồn?").
+            asking = bool(QUESTION_RE.search(t)) and not near and not HEDGE_RE.search(t)
+            sig["answers_current"] = not asking
+            # chỉ coi là "hỏi tư liệu" khi đang hỏi: câu trả lời có nhắc "trang phục", "Leonardo"...
+            # không làm bật thẻ tư liệu
+            sig["asks_context"] = [c for c, kws in self.ctx_kw.items() if any(k in t for k in kws)] if asking else []
             sig["emotion_letter"] = self._emotion_from_text(t)
             sig["depth"] = 3 if re.search(r"(mình|tôi|em).*(từng|nhớ|đời|gia đình|giống mình)", t) else \
                 2 if re.search(r"vì|nên|giống|gợi|khiến|làm mình", t) else (1 if len(t.split()) >= 3 else 0)
@@ -639,10 +681,13 @@ class Engine:
         for r in self.d["context_database"].get("rules", []):  # rule nhóm (vd thời gian => C2 + C3)
             if set(r.get("show", [])) & set(codes):
                 codes += r["show"] if len(r["show"]) > 1 else []
+        # người dùng HỎI lại điều đã kể: kể lại (thay vì báo "không có tư liệu")
+        again = set(sig["asks_context"]) if not sig["answers_current"] else set()
         out = []
         for c in dict.fromkeys(codes):
-            if c in self.contexts and c not in s["contexts_shown"]:
-                s["contexts_shown"].append(c)
+            if c in self.contexts and (c not in s["contexts_shown"] or c in again):
+                if c not in s["contexts_shown"]:
+                    s["contexts_shown"].append(c)
                 out.append({"code": c, "topic": self.contexts[c]["topic"], "content": self.contexts[c]["content"]})
         return out
 

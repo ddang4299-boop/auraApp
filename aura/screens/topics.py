@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from ..theme import BEIGE, BORDER, INK, MUTED, PRIMARY, TINT, WHITE
+from ..theme import GLASS_EDGE, GLASS_STRONG, BEIGE, BORDER, INK, MUTED, PRIMARY, TINT, WHITE
 from ..topics import ALL, CONCEPTS, GROUPS, KIND_NAME, TIMELINE, Topic
 from ..ui import (H, T, V, body, bottom_nav, card, cropped_image, icon, kicker, screen,
                   top_bar)
@@ -55,7 +55,7 @@ def more_button(text: str, on_click) -> ft.Control:
     """Nút viền "Xem thêm ..." căn giữa."""
     return ft.Container(ft.Row([T(text, 13, 600, PRIMARY), H(8), icon("arrow-up-right", 16, PRIMARY)],
                                spacing=0, tight=True, alignment=ft.MainAxisAlignment.CENTER),
-                        height=46, border=ft.Border.all(1, BORDER), border_radius=23, bgcolor=WHITE,
+                        height=46, border=ft.Border.all(1, GLASS_EDGE), border_radius=23, bgcolor=GLASS_STRONG,
                         alignment=ft.Alignment.CENTER, on_click=on_click, ink=True)
 
 

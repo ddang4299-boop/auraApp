@@ -18,6 +18,22 @@ RED = "#D86B5B"         # sai / thử lại
 GOLD = "#E8A84B"        # huy hiệu
 SKELETON = "#E4DCCD"
 
+# ---- Kính mờ (glassmorphism nhẹ) -------------------------------------------
+# Lớp trắng trong suốt + viền trắng đặt trên nền kem có vầng màu mờ: tạo chiều sâu như kính mờ
+# mà KHÔNG dùng hiệu ứng làm mờ thật (blur), vì blur trên trình duyệt điện thoại rất tốn,
+# dễ làm cuộn bị giật. Màu nền và màu thương hiệu giữ nguyên.
+GLASS = "#FFFFFF,0.58"          # thẻ, khung chat, khung tranh
+GLASS_STRONG = "#FFFFFF,0.78"   # ô nhập, thanh dưới
+GLASS_EDGE = "#FFFFFF,0.92"     # viền sáng của kính
+GLASS_LINE = "#DBD1C3,0.75"     # viền be nhạt (để kính vẫn có mép rõ trên nền sáng)
+SHADOW_INK = "#5A3A2A"          # màu bóng (nâu ấm)
+MAT_BG = "#EDE6D8,0.72"          # nền "giấy bồi" quanh ảnh tranh trong thẻ
+BLOB_ROSE = "#EBD7D3"           # vầng hồng đất trên nền
+BLOB_GOLD = "#EEDFC2"           # vầng vàng nhạt
+WINE_LIGHT = "#8E4352"          # đỏ rượu sáng hơn (đầu dải màu bong bóng người dùng)
+MAX_W = 560                     # bề rộng cột nội dung tối đa trên màn hình lớn
+WIDE_W = 980                    # từ bề rộng này trở lên: màn chat chia hai cột (tranh | chat)
+
 # ---- Font ------------------------------------------------------------------
 FONTS = {
     "Inter": "fonts/Inter-Regular.ttf",

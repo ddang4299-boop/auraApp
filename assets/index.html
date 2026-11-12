@@ -85,58 +85,133 @@
 </head>
 
 <body>
-  <div id="loading" role="status" aria-label="Đang mở AURA">
+  <!-- Màn chờ AURA. Thanh tiến trình đi theo các bước tải THẬT của trình duyệt:
+       trang đã tới (máy chủ đã thức) -> tải bộ hiển thị Flutter -> tải bộ vẽ -> khung hình đầu tiên.
+       Giữa các bước thanh nhích chậm để không đứng im; chờ lâu thì báo rõ lý do. -->
+  <div id="aura-splash" role="status" aria-live="polite" aria-label="Đang mở AURA">
     <style>
-      #loading {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 18px;
-        background: #F6F2E8;
-        font-family: -apple-system, "Segoe UI", sans-serif;
+      #aura-splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 22px; padding: 24px;
+        background:
+          radial-gradient(60vmax 60vmax at 105% -10%, #EBD7D3 0%, rgba(235,215,211,0) 60%),
+          radial-gradient(70vmax 70vmax at -10% 108%, #EEDFC2 0%, rgba(238,223,194,0) 62%),
+          #F6F2E8;
+        font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+        transition: opacity .45s ease;
       }
+      #aura-splash.done { opacity: 0; pointer-events: none; }
+      #aura-splash .logo { width: 250px; max-width: 68vw; height: auto; }
 
-      #loading .logo {
-        width: 260px;
-        max-width: 70vw;
-        height: auto;
+      /* khung kính "skeleton": gợi hình một bức tranh đang được treo lên */
+      #aura-splash .frame {
+        width: 168px; height: 214px; border-radius: 6px; padding: 9px; box-sizing: border-box;
+        background: rgba(255,255,255,.58); border: 1px solid rgba(255,255,255,.92);
+        box-shadow: 0 10px 26px -10px rgba(90,58,42,.28);
       }
-
-      #loading .bar {
-        width: 120px;
-        height: 3px;
-        border-radius: 2px;
-        background: #E4DCCD;
-        overflow: hidden;
+      #aura-splash .canvas, #aura-splash .line {
+        background: linear-gradient(100deg, #E4DCCD 30%, #F1EBDF 50%, #E4DCCD 70%);
+        background-size: 300% 100%; animation: aura-shimmer 1.6s ease-in-out infinite;
       }
+      #aura-splash .canvas { width: 100%; height: 100%; border-radius: 3px; }
+      #aura-splash .lines { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-top: -6px; }
+      #aura-splash .line { height: 8px; border-radius: 4px; }
 
-      #loading .bar::after {
-        content: "";
-        display: block;
-        width: 40%;
-        height: 100%;
-        background: #772F3D;
-        animation: aura-load 1.1s ease-in-out infinite;
+      #aura-splash .progress { width: 240px; max-width: 70vw; }
+      #aura-splash .track { height: 3px; border-radius: 2px; background: #E4DCCD; overflow: hidden; }
+      #aura-splash .fill {
+        height: 100%; width: 0%; border-radius: 2px;
+        background: linear-gradient(90deg, #8E4352, #772F3D);
+        transition: width .35s ease;
       }
+      #aura-splash .meta { display: flex; justify-content: space-between; margin-top: 9px; gap: 12px; }
+      #aura-splash .status { color: #772F3D; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      #aura-splash .pct { color: #796E64; font-size: 11px; font-variant-numeric: tabular-nums; }
+      #aura-splash .hint { color: #796E64; font-size: 12.5px; line-height: 1.5; text-align: center; max-width: 300px; min-height: 38px; }
+      #aura-splash .hint a { color: #772F3D; }
 
-      #loading .hint {
-        color: #796E64;
-        font-size: 13px;
-      }
-
-      @keyframes aura-load {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(250%); }
+      @keyframes aura-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        #aura-splash .canvas, #aura-splash .line { animation: none; }
       }
     </style>
     <img class="logo" src="images/logo.png" alt="AURA">
-
-    <div class="bar"></div>
-    <div class="hint">Đang mở…</div>
+    <div class="frame" aria-hidden="true"><div class="canvas"></div></div>
+    <div class="lines" aria-hidden="true">
+      <div class="line" style="width:120px"></div>
+      <div class="line" style="width:84px"></div>
+    </div>
+    <div class="progress">
+      <div class="track"><div class="fill" id="aura-fill"></div></div>
+      <div class="meta"><span class="status" id="aura-status">Đã kết nối máy chủ</span><span class="pct" id="aura-pct">0%</span></div>
+    </div>
+    <div class="hint" id="aura-hint"></div>
   </div>
+
+  <script>
+    (function () {
+      var fill = document.getElementById('aura-fill');
+      var pct = document.getElementById('aura-pct');
+      var statusEl = document.getElementById('aura-status');
+      var hint = document.getElementById('aura-hint');
+      var splash = document.getElementById('aura-splash');
+      // bước tải: [mức tối thiểu khi đạt bước, mức trần trước bước kế, chữ trạng thái]
+      var STEPS = {
+        page:     [12, 45, 'Đang tải bộ hiển thị'],
+        engine:   [55, 78, 'Đang dựng phòng trưng bày'],
+        renderer: [80, 96, 'Đang mở tác phẩm'],
+        ready:    [100, 100, 'Sẵn sàng']
+      };
+      var value = 0, cap = 0, finished = false, t0 = Date.now();
+
+      function setStep(name) {
+        var s = STEPS[name];
+        if (!s || s[0] < value && name !== 'ready') { if (s) cap = Math.max(cap, s[1]); return; }
+        value = Math.max(value, s[0]); cap = Math.max(cap, s[1]);
+        statusEl.textContent = s[2];
+        draw();
+      }
+      function draw() {
+        fill.style.width = value.toFixed(1) + '%';
+        pct.textContent = Math.round(value) + '%';
+      }
+      setStep('page');
+
+      // Theo dõi các tệp lớn của Flutter tải xong
+      try {
+        new PerformanceObserver(function (list) {
+          list.getEntries().forEach(function (e) {
+            var n = e.name || '';
+            if (/main\.dart\.(js|mjs|wasm)/.test(n)) setStep('engine');
+            else if (/canvaskit|skwasm/.test(n) && /\.wasm/.test(n)) setStep('renderer');
+          });
+        }).observe({ type: 'resource', buffered: true });
+      } catch (err) { /* trình duyệt cũ: chỉ dùng thanh nhích dần */ }
+
+      // Nhích chậm dần về mức trần của bước hiện tại để thanh không đứng im
+      var tick = setInterval(function () {
+        if (finished) return clearInterval(tick);
+        if (value < cap - 0.5) { value += Math.max(0.15, (cap - value) * 0.035); draw(); }
+        var waited = (Date.now() - t0) / 1000;
+        if (waited > 45) {
+          hint.innerHTML = 'Mạng đang chậm hoặc máy chủ đang bận. Bạn có thể <a href="">tải lại trang</a>.';
+        } else if (waited > 12) {
+          hint.textContent = 'Lần mở đầu tiên cần tải bộ hiển thị (vài MB), sau đó sẽ nhanh hơn. Cảm ơn bạn đã chờ.';
+        }
+      }, 120);
+
+      window.addEventListener('flutter-first-frame', function () {
+        setStep('ready');
+        finished = true;
+        // chờ giao diện AURA kịp hiện nội dung rồi mới mờ màn chờ
+        setTimeout(function () {
+          splash.classList.add('done');
+          setTimeout(function () { splash.remove(); }, 500);
+        }, 650);
+      }, { once: true });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

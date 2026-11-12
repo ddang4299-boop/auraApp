@@ -4,9 +4,12 @@ from __future__ import annotations
 import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS
-from ..theme import BEIGE, INK, MUTED, PRIMARY, RADIUS, TINT, WHITE
-from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, icon, kicker,
+from ..theme import GLASS_STRONG, INK, MUTED, PRIMARY, TINT, WHITE
+from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, glass, icon,
                   primary_button, screen, source_line, top_bar)
+from .viewer import framed, open_viewer
+
+MAT = 10          # viền giấy quanh tranh
 
 HOTSPOT = 25
 NUM_WORDS = {1: "Một", 2: "Hai", 3: "Ba", 4: "Bốn"}
@@ -36,11 +39,16 @@ def _look_point(n: int, title: str, text: str) -> ft.Control:
 def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
     p = PAINTINGS.get(pid) or PAINTINGS[DEFAULT_ID]
     cw = app.content_width
-    img_h = cw / p.aspect
-    first_detail = next(iter(p.details))
-    image = cropped_image(p.image, p.aspect, cw, img_h,
-                          overlays=[_hotspot(app, p, h, cw, img_h) for h in p.hotspots],
-                          on_click=lambda e: app.go(f"/detail/{p.id}/{first_detail}"))
+    iw = cw - 2 * MAT - 2
+    img_h = iw / p.aspect
+    zoom_btn = ft.Container(icon("maximize-2", 17, PRIMARY), width=34, height=34, border_radius=17,
+                            bgcolor=GLASS_STRONG, alignment=ft.Alignment.CENTER, right=8, top=8,
+                            on_click=lambda e: open_viewer(app, p), tooltip="Phóng to")
+    # Tranh treo giữa khung kính như trong phòng trưng bày; chạm tranh để phóng to / kéo xem kỹ,
+    # chạm số để mở từng chi tiết.
+    image = framed(cropped_image(p.image, p.aspect, iw, img_h,
+                                 overlays=[*(_hotspot(app, p, h, iw, img_h) for h in p.hotspots), zoom_btn],
+                                 on_click=lambda e: open_viewer(app, p)), mat=MAT)
     looks: list[ft.Control] = []
     for i, lp in enumerate(p.look_points):
         if i:
@@ -71,7 +79,7 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         image,
         V(6.5),
         T(f"{NUM_WORDS.get(len(p.hotspots), len(p.hotspots))} điểm để bắt đầu nhìn · Chạm ảnh để phóng to ↗",
-          10, 400, MUTED),
+          10, 400, MUTED, align=ft.TextAlign.CENTER),
         V(19.5),
         T("Bạn đang thấy gì?", 23, serif=True),
         V(11.5),
@@ -89,9 +97,9 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         V(11.5),
         T(p.story, 14, 400, INK),
         V(25.5),
-        ft.Container(ft.Column([
+        glass(ft.Column([
             T(p.word[0], 12, 600, INK), V(5), T(p.word[1], 12, 400, MUTED),
-        ], spacing=0, tight=True), bgcolor=BEIGE, border_radius=RADIUS,
+        ], spacing=0, tight=True), radius=12,
             padding=ft.Padding.only(left=16, right=16, top=14, bottom=17)),
         V(24),
         ft.Container(ft.Column([T(p.footnote[0], 10, 400, MUTED, lh=1.6),

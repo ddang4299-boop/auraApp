@@ -26,7 +26,7 @@ from typing import Optional
 from aura.data import Painting
 
 from .library import EXIT_Q
-from aura.socratic import (AuraTurn, Choice, DetailAttachment, Message, ScriptedSocraticEngine,
+from aura.socratic import (AuraTurn, Choice, DetailAttachment, Info, Message, ScriptedSocraticEngine,
                            SocraticEngine, Summary)
 
 # Câu đệm DỰ PHÒNG trước câu hỏi kế tiếp, chỉ dùng khi engine không có lời phản hồi riêng
@@ -212,6 +212,7 @@ class AuraChatbotEngine:
         if feedback:
             ack = ""
         paragraphs: list[str] = []
+        info_at, infos = 0, []
         if r["ended"]:
             if feedback:
                 paragraphs.append(feedback)
@@ -223,12 +224,16 @@ class AuraChatbotEngine:
                 paragraphs.append(feedback)
             elif ack and (r["contexts"] or not q):
                 paragraphs.append(ack)
-            paragraphs += [c["content"] for c in r["contexts"]]
+            # tư liệu hiện thành thẻ riêng (tên chủ đề + nội dung) ngay sau lời dẫn
+            info_at = len(paragraphs)
+            infos = [Info(c["topic"], c["content"]) for c in r["contexts"]]
             if q:
-                # câu đệm đứng liền trước câu hỏi trong cùng một đoạn cho tự nhiên
+                # câu đệm là một đoạn riêng, câu hỏi một đoạn riêng (giao diện tô nổi câu hỏi)
                 lead = ack if (ack and not r["ack"] and not r["contexts"]) else ""
-                paragraphs.append(f"{lead} {q['text']}".strip())
-        if not paragraphs:
+                if lead:
+                    paragraphs.append(lead)
+                paragraphs.append(q["text"])
+        if not paragraphs and not infos:
             paragraphs.append(CLOSING_FALLBACK if r["ended"] else "Bạn muốn nhìn tiếp điều gì?")
 
         summary = None
@@ -237,7 +242,7 @@ class AuraChatbotEngine:
                               action="Làm quiz nhỏ" if painting.quiz else "Chia sẻ cảm nhận")
 
         source = None
-        if r["sources"]:
+        if r["sources"] and not infos:     # có thẻ tư liệu thì thẻ đã ghi rõ chủ đề
             source = "Thông tin: " + " · ".join(r["sources"])
         elif r["ended"]:
             source = f"Nguồn: {painting.museum} · Xem nguồn ↗"
@@ -250,6 +255,8 @@ class AuraChatbotEngine:
             summary=summary,
             source=source,
             done=bool(r["ended"]),
+            infos=infos,
+            info_at=info_at,
         )
 
     @staticmethod

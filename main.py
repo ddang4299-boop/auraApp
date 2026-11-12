@@ -23,11 +23,37 @@ def main(page: ft.Page):
     AuraApp(page, engine=AuraChatbotEngine())
 
 
+def _skip_send_log() -> None:
+    """Bản web: bỏ một dòng log tốn CPU của Flet 1.0.5.
+
+    Mỗi lần gửi giao diện xuống trình duyệt, Flet chạy `transport_log.debug(f"... {message}")`:
+    chuỗi f-string được dựng (đổi CẢ cây giao diện thành chữ) kể cả khi log đang tắt, tốn
+    khoảng 12% CPU mỗi lần chuyển màn. Máy chủ miễn phí chỉ có 0,1 CPU nên phần này đáng kể.
+    Thay bằng bản giống hệt nhưng không có dòng log; chỉ áp dụng đúng phiên bản đã kiểm tra."""
+    import logging
+
+    import msgpack
+    from flet.controls.base_control import BaseControl
+    from flet.messaging.protocol import configure_encode_object_for_msgpack
+    from flet_web.fastapi.flet_app import FletApp
+
+    if ft.__version__ != "1.0.5" or logging.getLogger("flet_transport").isEnabledFor(logging.DEBUG):
+        return
+    encode = configure_encode_object_for_msgpack(BaseControl)
+
+    def send_message(self, message):
+        body = msgpack.packb([message.action, message.body], default=encode)
+        self._FletApp__send_queue.put_nowait(b"\x00" + body)
+
+    FletApp.send_message = send_message
+
+
 if __name__ == "__main__":
     # Máy chủ (Render...) cấp cổng qua biến PORT; chạy thử web trên máy thì đặt AURA_WEB_PORT.
     port = os.environ.get("AURA_WEB_PORT") or os.environ.get("PORT")
     if port:   # chế độ web: giao diện mở bằng trình duyệt, Python (và key AI) ở lại máy chủ
         os.environ.setdefault("FLET_FORCE_WEB_SERVER", "true")
+        _skip_send_log()
         host = "0.0.0.0" if os.environ.get("PORT") else None   # máy chủ: nhận kết nối từ ngoài
         ft.run(main, view=None, host=host, port=int(port), assets_dir="assets")
     else:
