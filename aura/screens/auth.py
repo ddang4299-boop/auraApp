@@ -4,8 +4,8 @@ from __future__ import annotations
 import flet as ft
 
 from ..data import MONA_LISA
-from ..theme import MUTED, PRIMARY
-from ..ui import T, V, body, cropped_image, primary_button, screen, text_link
+from ..theme import MUTED
+from ..ui import T, V, body, cropped_image, logo, primary_button, screen, text_link
 
 WELCOME_CROP = (0.0, 0.08, 1.0, 0.59)       # gương mặt và vai của Mona Lisa
 
@@ -15,7 +15,7 @@ def welcome(app, q) -> ft.View:
     cw = app.content_width
     content = body([
         V(25),
-        T("AURA", 37.5, 600, PRIMARY, logo=True, ls=-0.8, lh=1.0),
+        logo(40),
         V(13.5),
         T("Mỗi bức tranh, một câu chuyện.", 27, serif=True),
         V(27.5),

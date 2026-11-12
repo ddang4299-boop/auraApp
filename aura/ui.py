@@ -50,6 +50,21 @@ def T(value: str = "", size: float = 14, weight: int = 400, color: str = INK, *,
                    spans=spans, expand=expand, width=width, on_tap=on_tap, no_wrap=no_wrap)
 
 
+LOGO_WORD = "images/logo_word.png"     # chữ AURA vẽ riêng của nhóm, tô màu đỏ rượu (nền trong suốt)
+LOGO_WORD_ASPECT = 3.636               # rộng / cao
+LOGO_FULL = "images/logo.png"          # chữ AURA + ngôi sao + "Art Understanding & Renaissance Analysis"
+LOGO_FULL_ASPECT = 1000 / 439
+
+
+def logo(height: float, *, full: bool = False) -> ft.Control:
+    """Logo AURA dạng ảnh, luôn giữ đúng kích thước và nằm bên trái (kể cả trong cột co giãn).
+    full=True: kèm ngôi sao và dòng chữ phụ."""
+    src, aspect = (LOGO_FULL, LOGO_FULL_ASPECT) if full else (LOGO_WORD, LOGO_WORD_ASPECT)
+    img = ft.Image(src=src, height=height, width=height * aspect, fit=ft.BoxFit.CONTAIN,
+                   filter_quality=ft.FilterQuality.HIGH)
+    return ft.Row([img], spacing=0, tight=True)
+
+
 def kicker(text: str, size: float = 10, ls: float = 1.2, color: str = PRIMARY) -> ft.Text:
     """Dòng nhãn nhỏ viết hoa màu đỏ rượu (VD: ĐĂNG NHẬP CÙNG AURA)."""
     return T(text.upper(), size, 600, color, ls=ls)
@@ -202,7 +217,7 @@ def top_bar(title: str, *, on_back: Handler = None, leading: str = "arrow-left",
             trailing_color: str = INK, offset_top: float = 0) -> ft.Container:
     """Thanh tiêu đề: nút quay lại + tiêu đề + logo AURA / icon bên phải."""
     if trailing == "aura":
-        right: ft.Control = T("AURA", 18, 400, PRIMARY, serif=True, ls=0)
+        right: ft.Control = logo(17)
     elif trailing:
         size = 22 if trailing == "info" else 24
         right = ft.Container(icon(trailing, size, trailing_color), on_click=on_trailing)

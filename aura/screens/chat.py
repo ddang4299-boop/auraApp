@@ -11,7 +11,7 @@ import flet as ft
 from ..data import DEFAULT_ID, PAINTINGS, Painting
 from ..socratic import STAGES, AuraTurn, Choice, Message
 from ..theme import BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, TINT, WHITE
-from ..ui import (H, T, V, body, bottom_nav, bottom_sheet, cropped_image, icon, kicker, screen,
+from ..ui import (H, T, V, body, bottom_nav, bottom_sheet, cropped_image, icon, kicker, logo, screen,
                   source_line, surface_field, top_bar)
 
 ABOUT = ("AURA không đưa ra đáp án ngay. Theo phương pháp Socrates, AURA đặt câu hỏi để bạn tự "
@@ -105,7 +105,7 @@ BG_OFF = "#F6F2E8"
 
 
 def _aura_header() -> ft.Control:
-    return ft.Row([T("AURA", 22, 400, PRIMARY, serif=True, ls=0, lh=1.2), H(14),
+    return ft.Row([logo(21), H(12),
                    ft.Container(T("Cùng bạn nhìn tranh", 10, 400, MUTED, lh=1.0),
                                 padding=ft.Padding.only(top=4))],
                   spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER)

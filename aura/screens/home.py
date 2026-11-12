@@ -9,7 +9,7 @@ from ..data import MONA_LISA
 from ..theme import INK, MUTED, PRIMARY, WHITE
 from ..topics import (ALL, CONCEPTS, CONCEPTS_ON_HOME, FACTS, INTRO, PERIODS, TIMELINE,
                       TIMELINE_HIGHLIGHTS, Topic)
-from ..ui import (H, T, V, avatar, body, bottom_nav, bottom_sheet, card, cropped_image, divider,
+from ..ui import (H, T, V, avatar, body, bottom_nav, bottom_sheet, card, cropped_image, divider, logo,
                   icon, kicker, primary_button, screen)
 from .topics import concept_grid, more_button, thumb
 
@@ -110,7 +110,7 @@ def build(app, q) -> ft.View:
     content = body([
         V(7.5),
         ft.Row([
-            T("AURA", 37.5, 600, PRIMARY, logo=True, ls=-0.8, lh=1.0),
+            logo(36),
             ft.Container(expand=True),
             avatar(app.profile, 38, on_click=lambda e: app.go("/profile")),
         ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
