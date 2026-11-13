@@ -13,7 +13,7 @@ from ..socratic import STAGES, AuraTurn, Choice, Info, Message
 from ..theme import (BORDER, GLASS, GLASS_EDGE, GLASS_LINE, INK, MUTED, PRIMARY, SHADOW_INK, TINT,
                      WHITE, WIDE_W, WINE_LIGHT)
 from ..ui import (H, T, V, body, bottom_nav, bottom_sheet, cropped_image, glass, icon, logo, screen,
-                  source_line, surface_field, top_bar)
+                  source_line, surface_field, top_bar, zoom_badge)
 from .viewer import gallery_wall, open_viewer
 
 INFO_BG = "#F3EADB,0.86"     # thẻ tư liệu: be ấm, hơi đậm hơn bong bóng AURA
@@ -25,11 +25,14 @@ ABOUT = ("AURA không đưa ra đáp án ngay. Theo phương pháp Socrates, AUR
 
 def _painting_button(app, p: Painting) -> ft.Control:
     """Ảnh tranh nhỏ cạnh ô nhập: chạm để xem tranh (phóng to được) mà không phải cuộn lên đầu."""
-    return ft.Container(
+    thumb = ft.Container(
         ft.Image(src=p.image, width=28, height=36, fit=ft.BoxFit.COVER),
         width=28, height=36, border_radius=4, clip_behavior=ft.ClipBehavior.HARD_EDGE,
-        border=ft.Border.all(1, BORDER), tooltip="Xem tranh",
-        on_click=lambda e: open_viewer(app, p))
+        border=ft.Border.all(1, BORDER), left=0, top=0)
+    # kính lúp nhỏ ở góc: báo ảnh này mở ra phóng to được
+    return ft.Container(ft.Stack([thumb, zoom_badge(17, right=0, bottom=0)], width=35, height=43),
+                        width=35, height=43, tooltip="Xem tranh (phóng to được)",
+                        on_click=lambda e: open_viewer(app, p))
 
 
 def _context_card(app, p: Painting) -> ft.Control:
@@ -48,7 +51,7 @@ def _context_card(app, p: Painting) -> ft.Control:
             V(2),
             T(f"{p.artist} · {p.year} · {p.museum}", 10, 400, MUTED, max_lines=1),
         ], spacing=0, tight=True, expand=True),
-        H(8), icon("maximize-2", 18, PRIMARY),
+        H(8), zoom_badge(30),
     ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         radius=14, padding=ft.Padding.only(left=14, right=14, top=10, bottom=10),
         on_click=lambda e: open_viewer(app, p))
@@ -121,6 +124,7 @@ def _detail_card(app, p: Painting, att) -> ft.Control:
         T(att.label.upper(), 9, 600, PRIMARY, ls=0.9),
         V(7),
         cropped_image(p.image, p.aspect, w - 2, 180, att.crop, radius=6,
+                      overlays=[zoom_badge(28, right=8, top=8)],
                       on_click=lambda e: app.go(f"/detail/{p.id}/{att.detail_key}")),
         V(8),
         ft.Container(ft.Row([T("Xem toàn bộ chi tiết", 11, 600, PRIMARY), H(12),

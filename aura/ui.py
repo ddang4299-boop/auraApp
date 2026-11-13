@@ -91,6 +91,24 @@ def icon(name: str, size: float = 22, color: str = INK) -> ft.Image:
     return ft.Image(src=f"icons/{name}.svg", width=size, height=size, color=color)
 
 
+def zoom_badge(size: float = 26, **pos) -> ft.Container:
+    """Huy hiệu kính lúp tròn đặt ở góc ảnh: báo cho người xem biết ảnh phóng to được.
+    pos: vị trí trong Stack (right=, top=, bottom=...)."""
+    return ft.Container(icon("zoom-in", size * 0.58, PRIMARY), width=size, height=size, border_radius=size / 2,
+                        bgcolor=GLASS_STRONG, border=ft.Border.all(1, GLASS_EDGE),
+                        alignment=ft.Alignment.CENTER,
+                        shadow=[ft.BoxShadow(blur_radius=6, offset=ft.Offset(0, 1), color=f"{SHADOW_INK},0.16")],
+                        **pos)
+
+
+def zoom_hint(text: str) -> ft.Row:
+    """Dòng hướng dẫn phóng to có kính lúp phía trước."""
+    # wrap=True: màn hẹp thì chữ tự xuống dòng thay vì tràn ra ngoài
+    return ft.Row([icon("zoom-in", 13, MUTED), T(text, 10, 400, MUTED, align=ft.TextAlign.CENTER)],
+                  spacing=6, run_spacing=2, alignment=ft.MainAxisAlignment.CENTER,
+                  vertical_alignment=ft.CrossAxisAlignment.CENTER, wrap=True)
+
+
 def divider(color: str = BORDER) -> ft.Container:
     return ft.Container(height=1, bgcolor=color)
 

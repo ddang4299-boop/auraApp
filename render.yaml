@@ -13,9 +13,9 @@ services:
       - key: PYTHON_VERSION
         value: 3.10.10
       - key: LLM_PROVIDER
-        value: gemini
+        value: groq
       - key: LLM_FALLBACK
-        value: "groq,groq:openai/gpt-oss-20b,openrouter,openai"
+        value: "groq:openai/gpt-oss-20b,gemini,openrouter,openai"
       - key: GEMINI_MODEL
         value: gemini-3.5-flash
       - key: LLM_TIMEOUT
@@ -23,6 +23,12 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      # key thứ hai (tài khoản khác, hạn mức riêng): hết lượt ở key 1 thì tự chuyển sang key 2.
+      # Có thể thêm _3, _4... theo cùng cách.
+      - key: GROQ_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_2
         sync: false
       # tuỳ chọn: OpenRouter (key bắt đầu bằng sk-or-) và OpenAI (cần nạp tín dụng)
       - key: OPENROUTER_API_KEY

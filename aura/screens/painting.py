@@ -4,7 +4,7 @@ from __future__ import annotations
 import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS
-from ..theme import GLASS_STRONG, INK, MUTED, PRIMARY, TINT, WHITE
+from ..theme import GLASS_EDGE, GLASS_STRONG, INK, MUTED, PRIMARY, SHADOW_INK, TINT, WHITE
 from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, glass, icon,
                   primary_button, screen, source_line, top_bar)
 from .viewer import framed, open_viewer
@@ -41,9 +41,14 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
     cw = app.content_width
     iw = cw - 2 * MAT - 2
     img_h = iw / p.aspect
-    zoom_btn = ft.Container(icon("maximize-2", 17, PRIMARY), width=34, height=34, border_radius=17,
-                            bgcolor=GLASS_STRONG, alignment=ft.Alignment.CENTER, right=8, top=8,
-                            on_click=lambda e: open_viewer(app, p), tooltip="Phóng to")
+    # nút kính lúp có chữ ở góc phải trên (các số chi tiết nằm ở giữa và bên trái nên không bị che)
+    zoom_btn = ft.Container(
+        ft.Row([icon("zoom-in", 16, PRIMARY), T("Phóng to", 11, 600, PRIMARY, lh=1.0)],
+               spacing=5, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        height=32, border_radius=16, padding=ft.Padding.only(left=10, right=12),
+        bgcolor=GLASS_STRONG, border=ft.Border.all(1, GLASS_EDGE), alignment=ft.Alignment.CENTER,
+        shadow=[ft.BoxShadow(blur_radius=6, offset=ft.Offset(0, 1), color=f"{SHADOW_INK},0.16")],
+        right=8, top=8, on_click=lambda e: open_viewer(app, p), tooltip="Phóng to")
     # Tranh treo giữa khung kính như trong phòng trưng bày; chạm tranh để phóng to / kéo xem kỹ,
     # chạm số để mở từng chi tiết.
     image = framed(cropped_image(p.image, p.aspect, iw, img_h,

@@ -62,7 +62,16 @@ class CircuitBreaker:
             return 3600.0
         # 429: Google báo phải chờ bao lâu (hết lượt/phút: vài chục giây; hết lượt/ngày: nhiều giờ)
         m = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+)", s)
-        return float(m.group(1)) if m else self.cooldown
+        if m:
+            return float(m.group(1))
+        # 429 của Groq: "Please try again in 4.11s" / "in 7m12.5s" / "in 450ms" -> nghỉ đúng chừng đó
+        m = re.search(r"try again in ([\d.hms]+)", s)
+        if m:
+            unit = {"ms": 0.001, "h": 3600.0, "m": 60.0, "s": 1.0}
+            wait = sum(float(n) * unit[u] for n, u in re.findall(r"([\d.]+)(ms|h|m|s)", m.group(1)))
+            if wait > 0:
+                return max(2.0, wait + 1.0)
+        return self.cooldown
 
 
 class GeminiLLM:
@@ -72,7 +81,9 @@ class GeminiLLM:
         from google import genai
         from google.genai import types
         try:
-            self.client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=int(TIMEOUT * 1000)))
+            # Google không nhận thời hạn dưới 10 giây (báo lỗi 400 "Minimum allowed deadline is 10s")
+            self.client = genai.Client(api_key=api_key,
+                                       http_options=types.HttpOptions(timeout=int(max(TIMEOUT, 10) * 1000)))
         except Exception:  # SDK cũ không có http_options
             self.client = genai.Client(api_key=api_key)
         self.model, self.temperature = model, temperature
@@ -186,29 +197,53 @@ class FallbackLLM:
         raise RuntimeError("Tất cả LLM đều lỗi:\n  " + "\n  ".join(errors))
 
 
-def _build(provider: str) -> Optional[LLMFn]:
-    """provider = "groq" (model mặc định / <PROVIDER>_MODEL) hoặc "groq:openai/gpt-oss-20b" (chỉ rõ model)."""
+def _keys(key_env: str) -> list:
+    """Mọi key của một provider: KEY, KEY_2, KEY_3... (và tên thay thế trong KEY_ALIASES).
+    Mỗi tài khoản Groq / Google có hạn mức riêng, nên thêm key của tài khoản khác = thêm sức chịu tải."""
+    found = []
+    for name in [key_env] + KEY_ALIASES.get(key_env, []):
+        for suffix in [""] + [f"_{i}" for i in range(2, 10)]:
+            v = (os.getenv(name + suffix) or "").strip()
+            if v and v not in found:
+                found.append(v)
+    return found
+
+
+def _build_all(provider: str) -> list:
+    """provider = "groq" (model mặc định / <PROVIDER>_MODEL) hoặc "groq:openai/gpt-oss-20b" (chỉ rõ model).
+    Trả về 1 LLM cho mỗi key của provider đó (theo thứ tự KEY, KEY_2, ...)."""
     provider, _, pinned = provider.strip().partition(":")
     provider = provider.lower()
     if provider not in PROVIDERS:
         raise ValueError(f"Provider không hợp lệ: {provider}. Chọn: {list(PROVIDERS)}")
     key_env, default_model, base_url = PROVIDERS[provider]
-    key = os.getenv(key_env) or next((os.getenv(a) for a in KEY_ALIASES.get(key_env, []) if os.getenv(a)), None)
-    if not key:
-        return None
     model = pinned.strip() or os.getenv(f"{provider.upper()}_MODEL") or default_model
     if not model:
         raise ValueError(f"{provider} cần đặt {provider.upper()}_MODEL trong .env (vd model có đuôi ':free').")
-    if provider == "gemini":
-        return GeminiLLM(model, key)
-    if provider == "anthropic":
-        return AnthropicLLM(model, key)
-    return OpenAICompatLLM(model, key, base_url)
+    out = []
+    for i, key in enumerate(_keys(key_env), 1):
+        if provider == "gemini":
+            m = GeminiLLM(model, key)
+        elif provider == "anthropic":
+            m = AnthropicLLM(model, key)
+        else:
+            m = OpenAICompatLLM(model, key, base_url)
+        if i > 1:
+            m.label += f" (key {i})"
+        out.append(m)
+    return out
+
+
+def _build(provider: str) -> Optional[LLMFn]:
+    """Như _build_all nhưng chỉ lấy key đầu tiên (dùng cho chẩn đoán)."""
+    ms = _build_all(provider)
+    return ms[0] if ms else None
 
 
 def make_llm() -> Optional[LLMFn]:
     """LLM_PROVIDER = provider chính, LLM_FALLBACK = các provider dự phòng, cách nhau dấu phẩy
-    (vd "groq,groq:openai/gpt-oss-20b": hai model Groq có hạn mức riêng). Có thể để trống.
+    (vd "groq:openai/gpt-oss-20b,gemini"). Có thể để trống. Provider có nhiều key (GROQ_API_KEY, GROQ_API_KEY_2...)
+    thì thử lần lượt từng key trước khi sang provider kế.
     Provider nào thiếu key thì bị bỏ qua; không còn cái nào -> None (engine chạy keyword offline)."""
     names = [os.getenv("LLM_PROVIDER", "gemini")] + os.getenv("LLM_FALLBACK", "").split(",")
     chain = []
@@ -216,12 +251,11 @@ def make_llm() -> Optional[LLMFn]:
         if not n.strip():
             continue
         try:
-            m = _build(n)
+            ms = _build_all(n)
         except (ImportError, ValueError) as e:   # thiếu thư viện / cấu hình sai: bỏ qua provider này
             print(f"[llm] Bỏ qua provider '{n}': {e}")
             continue
-        if m:
-            chain.append(CircuitBreaker(m))
+        chain += [CircuitBreaker(m) for m in ms]
     if not chain:
         return None
     return chain[0] if len(chain) == 1 else FallbackLLM(chain)

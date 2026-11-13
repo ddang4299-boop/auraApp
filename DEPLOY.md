@@ -34,9 +34,9 @@ File `.env` (chứa key) nằm trong `.gitignore` nên **không** bị đẩy l�
 
 1. Trong trang quản lý (Dashboard), bấm **New +** → **Blueprint**.
 2. Chọn repo `auraApp`. Render tự tìm thấy `render.yaml` và hiện dịch vụ tên `aura`.
-3. Render hỏi giá trị cho hai key bí mật. Dán key thật (giống trong file `.env` trên máy bạn):
-   - `GEMINI_API_KEY`
-   - `GROQ_API_KEY`
+3. Render hỏi giá trị cho các key bí mật. Dán key thật (giống trong file `.env` trên máy bạn):
+   - `GEMINI_API_KEY`, `GROQ_API_KEY`
+   - `GEMINI_API_KEY_2`, `GROQ_API_KEY_2` (key của tài khoản thứ hai, nếu có)
 4. Bấm **Apply** / **Deploy Blueprint**.
 
 Render bắt đầu cài thư viện và chạy app, mất khoảng 3–5 phút. Theo dõi ở tab **Logs**. Khi
@@ -67,11 +67,16 @@ Mỗi lần `git push` code mới, Render **tự** cài lại và chạy bản m
 
 - **Gói miễn phí sẽ "ngủ"** khi 15 phút không có ai dùng. Người mở link đầu tiên sau đó phải
   chờ khoảng 1 phút để máy chủ thức dậy; các lần sau thì nhanh.
-- **Hạn mức AI dùng chung.** Mọi người dùng chung key của bạn: Gemini miễn phí ~20 lượt/ngày,
-  hết thì tự sang Groq (`LLM_FALLBACK=groq,groq:openai/gpt-oss-20b`: hai model Groq, mỗi model
-  8.000 token/phút riêng), cả hai cùng hết thì AURA trả lời bằng phản hồi viết sẵn (vẫn dùng được).
-  Bấm nút gợi ý không tốn lượt AI; chỉ câu tự gõ mới gọi AI. Nếu Render không tự lấy giá trị
-  `LLM_FALLBACK` mới từ `render.yaml`, vào **Environment** sửa tay thành giá trị trên.
+- **Hạn mức AI dùng chung.** Mọi người dùng chung key của bạn. Thứ tự AI được gọi:
+  Groq `gpt-oss-120b` → Groq `gpt-oss-20b` → Gemini `gemini-3.5-flash` → (OpenRouter, OpenAI nếu có key).
+  Groq miễn phí: mỗi model 8.000 token/phút, 1.000 lượt/ngày; mỗi câu tự gõ tốn khoảng 3.500 token,
+  nên một tài khoản Groq chịu được chừng 2 câu/phút mỗi model. Gemini miễn phí ~20 lượt/ngày.
+  Tất cả cùng hết thì AURA báo đang quá tải / trả lời bằng phản hồi viết sẵn (vẫn dùng được).
+  Bấm nút gợi ý không tốn lượt AI; chỉ câu tự gõ mới gọi AI.
+- **Thêm key để chịu tải nhiều hơn.** Key của tài khoản khác đặt tên `GROQ_API_KEY_2`,
+  `GEMINI_API_KEY_2` (rồi `_3`, `_4`...). Key 1 hết lượt thì app tự chuyển sang key 2, không cần sửa code.
+- Nếu Render không tự lấy giá trị mới từ `render.yaml`, vào **Environment** sửa tay:
+  `LLM_PROVIDER=groq`, `LLM_FALLBACK=groq:openai/gpt-oss-20b,gemini,openrouter,openai`, `LLM_TIMEOUT=5`.
 - **Đăng nhập Google**: bấm "Tiếp tục với Google" thì cả tab chuyển sang trang Google, đăng nhập
   xong quay về app. Cần:
   1. Google Cloud → Google Auth Platform → **Clients** → client loại **Web application**, mục

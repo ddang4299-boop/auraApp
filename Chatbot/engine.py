@@ -43,20 +43,24 @@ UNSURE_KW = ["không biết", "không chắc", "chưa chắc", "không rõ", "kh
 # Câu hỏi / lời đề nghị cung cấp thông tin (vd "mình muốn biết về bối cảnh...")
 QUESTION_RE = re.compile(r"\?|là gì|là ai|vì sao|khi nào|tại sao|sao lại|muốn biết|muốn tìm hiểu|"
                          r"muốn khám phá về|kể cho|cho mình biết|cho tôi biết|giải thích|bao nhiêu|ở đâu|"
-                         r"bao giờ|như thế nào|ra sao|phải không|đúng không|có phải|hay không|(^|\s)ai(\s|$)|"
+                         r"bao giờ|như thế nào|ra sao|có phải|hay không|(^|\s)ai(\s|$)|"
+                         r"(phải|đúng|thật|vậy) (không|ko|k|hông|hok)(?!\w)|"   # cả viết tắt "đúng ko"
                          r"\S+ hay (?!đấy|quá|ghê|thật|lắm|nhỉ|đó)\S+\s*$|"   # "đậm hay nhạt" (không phải "hay quá")
-                         r"\bcó\b.*\bkhông\s*$")
+                         r"\bcó\b.*\b(không|ko|hông)\s*$")
 # Câu có dấu "?" nhưng thật ra là ý kiến của người dùng (vd "Mình nghĩ cô ấy đang buồn?")
 HEDGE_RE = re.compile(r"có lẽ|có thể là|chắc là|hình như|theo (mình|tôi|em|tớ)|"
                       r"(mình|tôi|em|tớ|tui) (nghĩ|thấy|đoán|cảm thấy|cho là)", re.I)
 LIMIT_MSG = ("Câu này nằm ngoài phần tư liệu mình có về bức tranh, nên mình xin không đoán. "
              "Mình cùng quay lại câu hỏi đang dở nhé.")
 OFFTOPIC_MSG = "Mình hiểu rồi. Mình cùng quay lại câu hỏi đang dở nhé."
+BUSY_MSG = ("Lúc này AI của mình đang quá tải nên chưa trả lời kỹ câu này được, bạn thử hỏi lại sau ít phút nhé. "
+            "Giờ mình cùng quay lại câu hỏi đang dở.")
 # Hỏi đáp (xem qa.py): lời dẫn theo nguồn của câu trả lời, và theo việc có "lái" sang hướng mới không
 QA_LEAD = {"notes": "Mình tra trong tư liệu về bức tranh và tìm được điều này.",
            "general": "Câu này nằm ngoài tư liệu của bức tranh, mình trả lời theo hiểu biết chung nhé."}
 QA_TOPIC = {"notes": "Trả lời từ tư liệu của tranh", "general": "Ngoài tư liệu của bức tranh"}
 QA_STAY = "Xem xong, mình cùng quay lại câu hỏi đang dở nhé."
+OFFTOPIC_LEAD = "Câu này nằm ngoài bức tranh nên mình xin phép không trả lời nhé."
 QA_STEER = "Câu hỏi của bạn khá gần với hướng “{label}”, mình cùng đi tiếp theo hướng đó nhé."
 BRIDGE_Q = "Điều vừa đọc gợi cho bạn thêm suy nghĩ gì về những gì bạn đã quan sát?"
 UNSURE_ACKS = ["Không sao, bạn cứ nói điều đầu tiên bạn nhận ra nhé.",
@@ -272,12 +276,21 @@ class Engine:
         """Trả lời câu hỏi bằng tư liệu tra được (hoặc kiến thức chung về nghệ thuật) và lái hội thoại."""
         is_q = node["type"] == "question" and node["id"] not in NO_UNSURE
         options = [o for o in qn.get("options", []) if "free input" not in o["label"].lower()]
-        res = self.qa.ask(text, node["id"] if is_q else None, options if is_q else [], self.llm)
+        res = self.qa.ask(text, node["id"] if is_q else None, options if is_q else [], self.llm,
+                          qtext=qn.get("text") or node.get("text") or "")
         if not res:
             return None
+        if res.source == "busy":           # AI quá tải: có tư liệu khớp thì vẫn hiện (cầu nối), không thì báo bận
+            if contexts:
+                return None
+            self._rotate(s, node)
+            return self._pack(s, BUSY_MSG, [], sig=sig)
         for c in contexts:                 # tư liệu AI chọn nhưng không hiện ra: để dành cho lần sau
             if c["code"] not in shown_before and c["code"] in s["contexts_shown"]:
                 s["contexts_shown"].remove(c["code"])
+        if res.offtopic:                   # lạc đề hẳn: từ chối nhẹ, rồi câu hỏi gợi mở kéo về lại bức tranh
+            self._rotate(s, node)
+            return self._pack(s, OFFTOPIC_LEAD, [], sig=sig, ask_text=res.followup)
         card = {"code": "QA", "source": res.source, "topic": QA_TOPIC[res.source], "content": res.answer}
         lead = QA_LEAD[res.source]
         steer = next((o for o in options if o["id"] == res.option_id), None) if is_q else None
@@ -292,6 +305,9 @@ class Engine:
             s["node"] = new_node
             return self._pack(s, f"{lead} {QA_STEER.format(label=steer['label'])}", [card], sig=sig)
         self._rotate(s, node)
+        if res.followup:
+            # AI hỏi lại theo kiểu Socrates, nối từ điều họ vừa hỏi sang đúng ý câu đang dở (gợi ý trả lời vẫn hợp)
+            return self._pack(s, lead, [card], sig=sig, ask_text=res.followup)
         return self._pack(s, f"{lead} {QA_STAY}", [card], sig=sig)
 
     def assessment(self, s: dict) -> dict:
@@ -406,12 +422,14 @@ class Engine:
                 return o, o["label"]
         return None, text
 
-    def _pack(self, s: dict, ack: str, contexts: list, sig: Optional[dict] = None, feedback: str = "") -> dict:
+    def _pack(self, s: dict, ack: str, contexts: list, sig: Optional[dict] = None, feedback: str = "",
+              ask_text: str = "") -> dict:
+        """ask_text: hỏi lại câu hiện tại bằng lời khác (cùng ý) cho lượt này, vd câu gợi mở AI viết."""
         node = s["node"]
         qn = self._view(node)
         if node["type"] == "question":
             s["stage_idx"] = max(0, min(3, int(self.q[node["id"]][1][-1]) - 1))
-        shown = qn["text"]
+        shown = ask_text or qn["text"]
         question = {
             "id": node["id"], "text": shown, "input_type": "free_text", "allow_free_input": True,
             "suggestions": self._chips(s, node),

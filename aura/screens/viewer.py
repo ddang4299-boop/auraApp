@@ -5,9 +5,9 @@ import flet as ft
 
 from ..data import Painting
 from ..theme import BG, INK, MUTED, PRIMARY, TINT
-from ..ui import V, T, glass, icon
+from ..ui import V, T, glass, icon, zoom_hint
 
-ZOOM_HINT = "Chụm hai ngón tay (hoặc cuộn chuột) để phóng to, kéo để di chuyển"
+ZOOM_HINT = "Chụm 2 ngón tay hoặc cuộn chuột để phóng to, kéo để di chuyển"
 
 
 def zoomable(p: Painting, w: float, h: float, *, radius: float = 4) -> ft.Container:
@@ -51,7 +51,7 @@ def open_viewer(app, p: Painting, *, show_details: bool = True) -> None:
         V(14),
         framed(zoomable(p, w, h), mat=8),
         V(10),
-        T(ZOOM_HINT, 10, 400, MUTED, align=ft.TextAlign.CENTER),
+        zoom_hint(ZOOM_HINT),
     ]
     if show_details and p.details:
         chips = [ft.Container(T(d.title, 11, 600, PRIMARY, no_wrap=True, lh=1.2), bgcolor=TINT,
@@ -82,7 +82,7 @@ def gallery_wall(app, p: Painting) -> ft.Control:
         V(4),
         T(f"{p.artist} · {p.year} · {p.museum}", 11, 400, MUTED, align=ft.TextAlign.CENTER),
         V(8),
-        T(ZOOM_HINT, 10, 400, MUTED, align=ft.TextAlign.CENTER),
+        zoom_hint(ZOOM_HINT),
     ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         alignment=ft.MainAxisAlignment.CENTER),
         alignment=ft.Alignment.CENTER, padding=ft.Padding.symmetric(horizontal=32, vertical=24))
