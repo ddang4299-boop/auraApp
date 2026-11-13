@@ -226,7 +226,8 @@ class AuraChatbotEngine:
                 paragraphs.append(ack)
             # tư liệu hiện thành thẻ riêng (tên chủ đề + nội dung) ngay sau lời dẫn
             info_at = len(paragraphs)
-            infos = [Info(c["topic"], c["content"]) for c in r["contexts"]]
+            infos = [Info(c["topic"], c["content"], general=c.get("source") == "general")
+                     for c in r["contexts"]]
             if q:
                 # câu đệm là một đoạn riêng, câu hỏi một đoạn riêng (giao diện tô nổi câu hỏi)
                 lead = ack if (ack and not r["ack"] and not r["contexts"]) else ""

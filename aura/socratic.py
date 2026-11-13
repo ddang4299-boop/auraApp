@@ -48,6 +48,7 @@ class Info:
     """Thẻ tư liệu: thông tin AURA tra trong kho tư liệu của tranh (danh tính, bối cảnh...)."""
     topic: str
     text: str
+    general: bool = False            # True: AI trả lời bằng kiến thức chung, không có trong tư liệu của tranh
 
 
 @dataclass

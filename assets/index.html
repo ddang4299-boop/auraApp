@@ -104,21 +104,7 @@
       #aura-splash.done { opacity: 0; pointer-events: none; }
       #aura-splash .logo { width: 250px; max-width: 68vw; height: auto; }
 
-      /* khung kính "skeleton": gợi hình một bức tranh đang được treo lên */
-      #aura-splash .frame {
-        width: 168px; height: 214px; border-radius: 6px; padding: 9px; box-sizing: border-box;
-        background: rgba(255,255,255,.58); border: 1px solid rgba(255,255,255,.92);
-        box-shadow: 0 10px 26px -10px rgba(90,58,42,.28);
-      }
-      #aura-splash .canvas, #aura-splash .line {
-        background: linear-gradient(100deg, #E4DCCD 30%, #F1EBDF 50%, #E4DCCD 70%);
-        background-size: 300% 100%; animation: aura-shimmer 1.6s ease-in-out infinite;
-      }
-      #aura-splash .canvas { width: 100%; height: 100%; border-radius: 3px; }
-      #aura-splash .lines { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-top: -6px; }
-      #aura-splash .line { height: 8px; border-radius: 4px; }
-
-      #aura-splash .progress { width: 240px; max-width: 70vw; }
+      #aura-splash .progress { width: 240px; max-width: 70vw; margin-top: 8px; }
       #aura-splash .track { height: 3px; border-radius: 2px; background: #E4DCCD; overflow: hidden; }
       #aura-splash .fill {
         height: 100%; width: 0%; border-radius: 2px;
@@ -131,17 +117,8 @@
       #aura-splash .hint { color: #796E64; font-size: 12.5px; line-height: 1.5; text-align: center; max-width: 300px; min-height: 38px; }
       #aura-splash .hint a { color: #772F3D; }
 
-      @keyframes aura-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-      @media (prefers-reduced-motion: reduce) {
-        #aura-splash .canvas, #aura-splash .line { animation: none; }
-      }
     </style>
     <img class="logo" src="images/logo.png" alt="AURA">
-    <div class="frame" aria-hidden="true"><div class="canvas"></div></div>
-    <div class="lines" aria-hidden="true">
-      <div class="line" style="width:120px"></div>
-      <div class="line" style="width:84px"></div>
-    </div>
     <div class="progress">
       <div class="track"><div class="fill" id="aura-fill"></div></div>
       <div class="meta"><span class="status" id="aura-status">Đã kết nối máy chủ</span><span class="pct" id="aura-pct">0%</span></div>

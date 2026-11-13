@@ -191,7 +191,7 @@
     },
     "rules": [
       {
-        "if_user_asks_about": "danh tính, là ai, người mẫu, tên thật, tên của cô ấy, tên gì, tên là gì, có chồng, chồng của, chồng cô, bao nhiêu tuổi, mấy tuổi, có con, người thật, có thật không, la gioconda",
+        "if_user_asks_about": "danh tính, người mẫu, tên thật, tên của cô ấy, tên gì, tên là gì, có chồng, chồng của, chồng cô, bao nhiêu tuổi, mấy tuổi, có con, người thật, có thật không, la gioconda, cô ấy là ai, người phụ nữ là ai, người này là ai, người mẫu là ai, bà ấy là ai, người trong tranh là ai, nàng là ai, trong tranh là ai, người phụ nữ này là ai",
         "show": [
           "C1"
         ]

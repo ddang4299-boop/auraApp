@@ -104,7 +104,8 @@ def _choice(c: Choice, *, picked: bool, enabled: bool, on_click) -> ft.Control:
 def _info_card(info: Info) -> ft.Control:
     """Thẻ tư liệu AURA tra được trong kho tư liệu của tranh: nhãn, chủ đề (chữ có chân), nội dung."""
     return ft.Container(ft.Column([
-        ft.Row([icon("book-open", 13, PRIMARY), H(6), T("TƯ LIỆU", 9, 600, PRIMARY, ls=1.1)],
+        ft.Row([icon("message-circle" if info.general else "book-open", 13, PRIMARY), H(6),
+                T("AI TRẢ LỜI · KIẾN THỨC CHUNG" if info.general else "TƯ LIỆU", 9, 600, PRIMARY, ls=1.1)],
                spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         V(6),
         T(info.topic, 16, 400, INK, serif=True),
