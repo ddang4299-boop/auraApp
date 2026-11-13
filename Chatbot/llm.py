@@ -56,8 +56,12 @@ class CircuitBreaker:
             raise
 
     def _pause_for(self, e: Exception) -> float:
+        s = str(e)
+        # Key sai / hết tín dụng: thử lại sau vài giây cũng vô ích -> nghỉ 1 giờ (đỡ tốn thời gian mỗi lượt)
+        if re.search(r"\b40[13]\b|invalid api key|incorrect api key|insufficient_quota|no credits", s, re.I):
+            return 3600.0
         # 429: Google báo phải chờ bao lâu (hết lượt/phút: vài chục giây; hết lượt/ngày: nhiều giờ)
-        m = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+)", str(e))
+        m = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+)", s)
         return float(m.group(1)) if m else self.cooldown
 
 
@@ -154,11 +158,16 @@ class AnthropicLLM:
 
 # provider -> (biến env chứa key, model mặc định, base_url nếu dùng OpenAI-compat)
 PROVIDERS = {
-    "gemini":     ("GEMINI_API_KEY",     "gemini-3.8-flash",        None),
-    "groq":       ("GROQ_API_KEY",       "openai/gpt-oss-120b",     "https://api.groq.com/openai/v1"),
-    "openrouter": ("OPENROUTER_API_KEY", "",                        "https://openrouter.ai/api/v1"),
-    "anthropic":  ("ANTHROPIC_API_KEY",  "claude-haiku-5-5",        None),
+    "gemini":     ("GEMINI_API_KEY",     "gemini-3.8-flash",            None),
+    "groq":       ("GROQ_API_KEY",       "openai/gpt-oss-120b",         "https://api.groq.com/openai/v1"),
+    # model miễn phí của OpenRouter có đuôi ":free" (~50 lượt/ngày nếu tài khoản chưa nạp tiền)
+    "openrouter": ("OPENROUTER_API_KEY", "google/gemma-4-31b-it:free",  "https://openrouter.ai/api/v1"),
+    # OpenAI tính phí theo lượt (cần nạp tín dụng ở platform.openai.com); gpt-4.1-mini nhanh, rẻ
+    "openai":     ("OPENAI_API_KEY",     "gpt-4.1-mini",                "https://api.openai.com/v1"),
+    "anthropic":  ("ANTHROPIC_API_KEY",  "claude-haiku-5-5",            None),
 }
+# Tên biến khác mà người dùng hay đặt cho cùng một key
+KEY_ALIASES = {"OPENAI_API_KEY": ["CHAT_GPT_KEY", "CHATGPT_API_KEY"]}
 
 
 class FallbackLLM:
@@ -184,7 +193,7 @@ def _build(provider: str) -> Optional[LLMFn]:
     if provider not in PROVIDERS:
         raise ValueError(f"Provider không hợp lệ: {provider}. Chọn: {list(PROVIDERS)}")
     key_env, default_model, base_url = PROVIDERS[provider]
-    key = os.getenv(key_env)
+    key = os.getenv(key_env) or next((os.getenv(a) for a in KEY_ALIASES.get(key_env, []) if os.getenv(a)), None)
     if not key:
         return None
     model = pinned.strip() or os.getenv(f"{provider.upper()}_MODEL") or default_model
