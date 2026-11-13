@@ -9,7 +9,7 @@ from ..data import MONA_LISA
 from ..theme import INK, MUTED, PRIMARY, WHITE
 from ..topics import (ALL, CONCEPTS, CONCEPTS_ON_HOME, FACTS, INTRO, PERIODS, TIMELINE,
                       TIMELINE_HIGHLIGHTS, Topic)
-from ..ui import (H, T, V, avatar, body, bottom_nav, bottom_sheet, card, cropped_image, divider, logo,
+from ..ui import (H, T, V, avatar, body, NAV_HOME, nav_bar, bottom_sheet, card, cropped_image, divider, logo,
                   icon, kicker, primary_button, screen)
 from .topics import concept_grid, more_button, thumb
 
@@ -155,4 +155,4 @@ def build(app, q) -> ft.View:
         V(15.5),
         facts,
     ], bottom=24.5)
-    return screen("/home", content, nav=bottom_nav(0, app.go))
+    return screen("/home", content, nav=nav_bar(app, NAV_HOME))

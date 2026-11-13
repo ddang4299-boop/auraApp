@@ -10,10 +10,10 @@ import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS, Painting
 from ..socratic import STAGES, AuraTurn, Choice, Info, Message
-from ..theme import (BORDER, GLASS, GLASS_EDGE, GLASS_LINE, INK, MUTED, PRIMARY, SHADOW_INK, TINT,
-                     WHITE, WIDE_W, WINE_LIGHT)
-from ..ui import (H, T, V, body, bottom_nav, bottom_sheet, cropped_image, glass, icon, logo, screen,
-                  source_line, surface_field, top_bar, zoom_badge)
+from ..theme import (BG, BORDER, GLASS, GLASS_EDGE, GLASS_LINE, INK, MAX_W, MUTED, PRIMARY, SHADOW_INK,
+                     SURFACE, TINT, WHITE, WIDE_W, WINE_LIGHT)
+from ..ui import (H, NAV_CHAT, T, V, body, bottom_sheet, cropped_image, glass, icon, logo, nav_bar,
+                  screen, source_line, surface_field, top_bar, zoom_badge)
 from .viewer import gallery_wall, open_viewer
 
 INFO_BG = "#F3EADB,0.86"     # thẻ tư liệu: be ấm, hơi đậm hơn bong bóng AURA
@@ -67,6 +67,14 @@ def _stage_chips(stage: int) -> ft.Row:
             bgcolor=PRIMARY if on else GLASS, border=None if on else ft.Border.all(1, GLASS_EDGE),
             animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT)))
     return ft.Row(chips, spacing=4, wrap=True, run_spacing=4)
+
+
+def _prompt_chip(text: str, on_click) -> ft.Control:
+    """Nút câu hỏi nhanh (giọng người xem hỏi AURA), nằm ngay trên ô nhập."""
+    return ft.Container(T(text, 12, 500, PRIMARY, no_wrap=True, lh=1.2), height=32,
+                        padding=ft.Padding.symmetric(horizontal=13), bgcolor=SURFACE,
+                        border=ft.Border.all(1, BORDER), border_radius=16,
+                        alignment=ft.Alignment.CENTER, on_click=on_click, ink=True)
 
 
 def _aura_header() -> ft.Control:
@@ -154,8 +162,9 @@ MIN_THINK = 0.6          # giây: "đang suy nghĩ" hiện đủ lâu để khô
 DOT = 6
 # Hiệu ứng "đang gõ": mỗi lần hiện thêm chữ là một lần gửi cập nhật từ Python sang màn hình.
 # Khi app chạy trên máy chủ (Render), gửi quá dày sẽ nghẽn mạng/CPU -> giới hạn ~14 lần mỗi đoạn.
-TYPE_TICK = 0.09         # giây giữa hai lần hiện thêm chữ (mỗi lần là một lượt gửi xuống trình duyệt)
-TYPE_PARA_MAX = 0.85     # một đoạn dài cỡ nào cũng gõ xong trong khoảng chừng này giây
+# Máy chủ miễn phí chỉ có 0,1 CPU nên giữ khoảng 6 lần gửi mỗi đoạn (trước đây ~10).
+TYPE_TICK = 0.12         # giây giữa hai lần hiện thêm chữ (mỗi lần là một lượt gửi xuống trình duyệt)
+TYPE_PARA_MAX = 0.72     # một đoạn dài cỡ nào cũng gõ xong trong khoảng chừng này giây
 WORD_RE = re.compile(r"\S+\s*")
 
 
@@ -194,6 +203,9 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
     engine = app.engine
 
     stage_holder = ft.Container(_stage_chips(st.stage))
+    # Câu hỏi nhanh: một hàng nút trượt ngang ngay trên ô nhập; câu đã hỏi thì ẩn đi.
+    prompts_row = ft.Row([], spacing=8, scroll=ft.ScrollMode.AUTO)
+    prompts_box = ft.Container(ft.Column([prompts_row, V(8)], spacing=0, tight=True), visible=False)
     scroller = ft.Ref[ft.Column]()
     think_row, think_label = _thinking()
     cw = app.content_width
@@ -236,7 +248,28 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
             thread.controls.insert(len(thread.controls) - 1, c)   # luôn đứng trước think_box
             new.append(c)
         stage_holder.content = _stage_chips(st.stage)
+        restart.visible = len(st.messages) > 1
         return new
+
+    def open_prompts() -> list[str]:
+        """Câu hỏi nhanh đang mời được: chưa hỏi, không trùng nút gợi ý của lượt này, AURA đang rảnh."""
+        last = st.messages[-1].turn if st.messages and st.messages[-1].role == "aura" else None
+        if not st.messages or st.thinking or (last is not None and last.done):
+            return []
+        shown = {c.text.strip() for c in (last.choices if last else [])}
+        return [x for x in p.quick_prompts if x not in st.asked and x not in shown]
+
+    def refresh_prompts() -> None:
+        items = open_prompts()
+        prompts_row.controls = [_prompt_chip(x, lambda e, x=x: app.page.run_task(ask_prompt, x))
+                                for x in items]
+        prompts_box.visible = bool(items)
+
+    async def ask_prompt(text: str) -> None:
+        if st.thinking:
+            return
+        st.asked.append(text)
+        await send(text)
 
     def refresh(i: int) -> None:
         """Vẽ lại riêng một khối (vd khoá các nút gợi ý của lượt vừa trả lời)."""
@@ -417,6 +450,7 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         # 1) Tin của người dùng trượt lên, nút gợi ý cũ khoá lại, AURA bắt đầu "suy nghĩ"
         set_thinking(True)
         refresh(prev_aura)
+        refresh_prompts()                  # đang bận: ẩn câu hỏi nhanh
         new = sync(animate=True)
         app.page.update()
         await reveal(new)
@@ -440,7 +474,13 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         think_box.visible = False
         st.messages.append(Message("aura", turn.paragraphs[0], turn))
         st.stage = max(st.stage, turn.stage)
+        app.save_chats()                   # cất ngay: lỡ tải lại trang giữa lúc đang gõ vẫn không mất lượt này
         await show_typed(len(st.messages) - 1, scroll_key=f"m{len(st.messages) - 2}")
+        refresh_prompts()
+        try:
+            app.page.update()
+        except Exception:
+            pass
 
     async def show_typed(i: int, scroll_key: str | None = None) -> None:
         typing[i] = ([], ft.Container(), None)
@@ -456,6 +496,7 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
             st.thinking = False
 
     async def start():
+        await app.wait_chats()             # đọc xong cuộc trò chuyện cất từ lần trước (nếu có) rồi mới chào
         if not st.messages and st.starting:
             # Một bản khác của màn này (vừa được dựng lại, vd khi đổi kích thước) đang lấy lời chào:
             # chờ nó xong rồi chỉ việc hiện tin nhắn, không xin lời chào lần nữa.
@@ -470,12 +511,51 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
             st.messages.append(Message("aura", turn.paragraphs[0], turn))
             st.stage = turn.stage
             st.thinking = True
+            app.save_chats()
             await show_typed(0)
+            refresh_prompts()
+            app.page.update()
             return
         new = sync(animate=False)
+        refresh_prompts()
         app.page.update()
         await reveal(new)
         await scroll(duration=0)           # quay lại cuộc trò chuyện cũ: về cuối ngay
+        if st.messages:
+            await scroll_end()
+
+    async def scroll_end() -> None:
+        """Cuộn về tin nhắn cuối sau khi trình duyệt vừa vẽ lại cả màn (mở lại trang, F5, mạng nối lại).
+        Lúc đó trang có thể chưa dựng xong nên lệnh cuộn đầu bị bỏ qua -> cuộn thêm hai lần
+        (mỗi lần chỉ là một lệnh nhỏ, không dựng lại gì)."""
+        if not app.page.views or app.page.views[-1].route != f"/chat/{p.id}":
+            return                         # người dùng đang ở màn khác
+        for wait in (0.4, 1.2):
+            await asyncio.sleep(wait)
+            await scroll(duration=0)
+
+    def confirm_restart(e=None) -> None:
+        async def do(e2):
+            app.page.pop_dialog()
+            if st.thinking:
+                return
+            # chờ hộp thoại đóng hẳn trên trình duyệt rồi mới thay màn (thay cùng lúc thì hộp thoại bị kẹt lại)
+            await asyncio.sleep(0.35)
+            app.reset_chat(p.id)
+            app.rebuild()                  # dựng lại màn chat với cuộc trò chuyện mới
+
+        app.page.show_dialog(ft.AlertDialog(
+            bgcolor=BG,
+            title=T("Bắt đầu lại cuộc trò chuyện?", 21, serif=True),
+            content=T("Cuộc trò chuyện hiện tại về bức tranh này sẽ được xoá để bắt đầu lại "
+                      "từ câu chào đầu tiên.", 13, 400, MUTED),
+            actions=[ft.TextButton(content=T("Huỷ", 13, 600, MUTED), on_click=lambda e2: app.page.pop_dialog()),
+                     ft.TextButton(content=T("Bắt đầu lại", 13, 600, PRIMARY), on_click=do)]))
+
+    restart = ft.Container(ft.Row([icon("rotate-ccw", 13, MUTED), H(5), T("Bắt đầu lại", 11, 500, MUTED)],
+                                  spacing=0, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                           on_click=confirm_restart, visible=len(st.messages) > 1,
+                           padding=ft.Padding.symmetric(vertical=4))
 
     field = ft.TextField(hint_text="Bạn muốn hiểu thêm điều gì?", expand=True,
                          text_style=ft.TextStyle(size=13, color=INK, font_family="Inter",
@@ -510,17 +590,22 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         V(14),
         _context_card(app, p),
         V(18.2),
-        T("TIẾN TRÌNH TRÒ CHUYỆN", 9, 600, PRIMARY, ls=1.0),
-        V(8.2),
+        ft.Row([T("TIẾN TRÌNH TRÒ CHUYỆN", 9, 600, PRIMARY, ls=1.0, expand=True), restart],
+               spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        V(6),
         stage_holder,
         thread,
     ], bottom=11.5, ref=scroller)          # tự cuộn bằng scroll_to (mượt) thay cho auto_scroll
-    footer = ft.Container(composer, padding=ft.Padding.only(left=24, right=24, top=10, bottom=20.5))
+    # Điện thoại: thanh điều hướng nổi nằm ngay dưới ô nhập nên chừa ít lề dưới hơn.
+    docked = app.page_width <= MAX_W
+    footer = ft.Container(ft.Column([prompts_box, composer], spacing=0, tight=True),
+                          padding=ft.Padding.only(left=24, right=24, top=10, bottom=10 if docked else 20.5))
     sync(animate=False)                    # tin nhắn cũ (khi quay lại màn chat) hiện ngay
+    app.on_reconnect = scroll_end          # F5 / mạng nối lại khi đang ở màn chat: về tin nhắn cuối
     app.page.run_task(start)
     # Máy tính / màn hình rộng: tranh lớn treo bên trái (phóng to được), cuộc trò chuyện bên phải.
     aside = gallery_wall(app, p) if app.page_width >= WIDE_W else None
     return screen(f"/chat/{p.id}", content,
                   top=top_bar("Hỏi Aura", on_back=app.back_handler, trailing="info",
                               on_trailing=lambda e: bottom_sheet(app.page, "AURA hỏi, bạn nhìn", ABOUT)),
-                  footer=footer, nav=bottom_nav(1, app.go), aside=aside)
+                  footer=footer, nav=nav_bar(app, NAV_CHAT), aside=aside)

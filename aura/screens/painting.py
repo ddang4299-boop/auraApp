@@ -5,7 +5,7 @@ import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS
 from ..theme import GLASS_EDGE, GLASS_STRONG, INK, MUTED, PRIMARY, SHADOW_INK, TINT, WHITE
-from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, glass, icon,
+from ..ui import (H, T, V, body, NAV_PAINTING, nav_bar, cropped_image, divider, glass, icon,
                   primary_button, screen, source_line, top_bar)
 from .viewer import framed, open_viewer
 
@@ -116,4 +116,4 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         primary_button("Bạn tò mò điều gì? Trò chuyện với AURA", lambda e: app.go(f"/chat/{p.id}"),
                        leading="message-circle"),
     ], bottom=24.5)
-    return screen(f"/painting/{p.id}", content, top=bar, nav=bottom_nav(1, app.go))
+    return screen(f"/painting/{p.id}", content, top=bar, nav=nav_bar(app, NAV_PAINTING))

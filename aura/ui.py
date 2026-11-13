@@ -7,9 +7,9 @@ from typing import Callable, Optional, Sequence
 import flet as ft
 
 from .theme import (BEIGE, BG, BLOB_GOLD, BLOB_ROSE, BORDER, BUTTON_H, GLASS, GLASS_EDGE,
-                    GLASS_LINE, GLASS_STRONG, GUTTER, INK, INTER_BY_WEIGHT, MUTED, NAV_H, PRIMARY,
-                    RADIUS, SANS_LINE_HEIGHT, SERIF_LINE_HEIGHT, SHADOW_INK, SURFACE, TINT,
-                    TOP_BAR_H, WHITE)
+                    GLASS_STRONG, GUTTER, INK, INTER_BY_WEIGHT, MUTED, NAV_ACTIVE_BG, NAV_BG,
+                    NAV_CLEAR, NAV_GAP, NAV_PILL_H, PRIMARY, RADIUS, SANS_LINE_HEIGHT,
+                    SERIF_LINE_HEIGHT, SHADOW_INK, SURFACE, TINT, TOP_BAR_H, WHITE)
 
 # Bề rộng cột nội dung khi màn hình rộng hơn MAX_W (máy tính, iPad ngang). App đặt giá trị này
 # ngay trước khi dựng một màn (xem AuraApp._build); None = điện thoại, cột chiếm hết bề ngang.
@@ -259,31 +259,42 @@ def top_bar(title: str, *, on_back: Handler = None, leading: str = "arrow-left",
     )
 
 
-NAV_ITEMS = [("compass", "Khám phá", "/home"), ("book-open", "Kho tranh", "/gallery"),
-             ("bookmark", "Đã lưu", "/saved")]
+# Thứ tự nút trên thanh điều hướng (dùng làm tham số `active` của nav_bar)
+NAV_HOME, NAV_PAINTING, NAV_CHAT, NAV_SOURCES = range(4)
 
 
-def bottom_nav(active: int, go: Callable[[str], None]) -> ft.Container:
-    """Thanh điều hướng dưới cùng (3 tab)."""
+def nav_items(pid: str) -> list[tuple[str, str, str]]:
+    """(icon, nhãn, đường dẫn) của 4 chức năng chính. Ba nút sau mở đúng bức tranh đang xem."""
+    return [("compass", "Khám phá", "/home"),
+            ("image", "Tác phẩm", f"/painting/{pid}"),
+            ("message-circle", "Hỏi Aura", f"/chat/{pid}"),
+            ("library", "Tư liệu", f"/sources/{pid}")]
+
+
+def nav_bar(app, active: int) -> ft.Container:
+    """Thanh điều hướng nổi dạng viên thuốc (bo tròn hẳn hai đầu): icon nét mảnh + nhãn nhỏ.
+
+    Điện thoại: nổi ở cạnh dưới, nội dung cuộn bên dưới thanh. Máy tính: gọn ở góc trên (xem screen).
+    Chỉ dùng nền màu đặc và một lớp bóng tĩnh: KHÔNG làm mờ nền (blur), không có hiệu ứng chạy liên
+    tục, nên nhẹ cho điện thoại yếu và cho máy chủ miễn phí."""
     items = []
-    for i, (ic, label, route) in enumerate(NAV_ITEMS):
+    for i, (ic, label, route) in enumerate(nav_items(app.current_pid)):
         on = i == active
+        color = PRIMARY if on else MUTED
         items.append(ft.Container(
-            content=ft.Column([
-                ft.Container(icon(ic, 22, PRIMARY if on else MUTED), width=50, height=28,
-                             border_radius=14, bgcolor=TINT if on else None,
-                             alignment=ft.Alignment.CENTER),
-                V(4),
-                T(label, 10, 600 if on else 500, PRIMARY if on else MUTED, lh=1.2),
-            ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            expand=True, alignment=ft.Alignment.TOP_CENTER,
-            on_click=(lambda e, r=route: go(r)),
-        ))
+            ft.Column([icon(ic, 20, color), V(3),
+                       T(label, 10, 600 if on else 500, color, lh=1.1, no_wrap=True)],
+                      spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            height=NAV_PILL_H - 10, border_radius=(NAV_PILL_H - 10) / 2,
+            padding=ft.Padding.symmetric(horizontal=12), alignment=ft.Alignment.CENTER,
+            bgcolor=NAV_ACTIVE_BG if on else None,
+            on_click=lambda e, r=route: app.go(r)))
     return ft.Container(
-        content=ft.Row(items, spacing=0, vertical_alignment=ft.CrossAxisAlignment.START),
-        height=NAV_H, bgcolor=GLASS_STRONG, padding=ft.Padding.only(left=GUTTER, right=GUTTER, top=9.5),
-        border=ft.Border.only(top=ft.BorderSide(1, GLASS_LINE)),
-    )
+        ft.Row(items, spacing=2, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        height=NAV_PILL_H, padding=4, bgcolor=NAV_BG, border_radius=NAV_PILL_H / 2,
+        border=ft.Border.all(1, BORDER),
+        shadow=[ft.BoxShadow(blur_radius=16, spread_radius=-4, offset=ft.Offset(0, 6),
+                             color=f"{SHADOW_INK},0.16")])
 
 
 def _status_bar() -> ft.Container:
@@ -356,7 +367,13 @@ def screen(route: str, content: ft.Control, *, top: ft.Control | None = None,
     """Lắp một màn hình hoàn chỉnh: (thanh trạng thái) + top bar + nội dung + footer + nav.
 
     Màn hình rộng (máy tính): cột nội dung rộng tối đa MAX_W đặt giữa; nếu có `aside`
-    (vd tranh lớn ở màn chat) thì aside chiếm phần bên trái, cột nội dung bên phải."""
+    (vd tranh lớn ở màn chat) thì aside chiếm phần bên trái, cột nội dung bên phải.
+    Thanh điều hướng (nav): máy tính đặt gọn ở góc trên; điện thoại nổi ở cạnh dưới. Màn có footer
+    (ô chat) thì thanh nằm ngay dưới footer, không đè lên ô nhập."""
+    fw = FRAME_W.get()
+    floating = nav is not None and not fw and footer is None
+    if floating and isinstance(content, ft.Column) and content.scroll:
+        content.controls.append(V(NAV_CLEAR))     # cuộn hết trang thì mục cuối vẫn nằm trên thanh nổi
     parts: list[ft.Control] = []
     if MOCK_DEVICE:
         parts.append(_status_bar())
@@ -365,13 +382,13 @@ def screen(route: str, content: ft.Control, *, top: ft.Control | None = None,
     parts.append(content)
     if footer is not None:
         parts.append(footer)
-    if nav is not None:
-        parts.append(nav)
+    if nav is not None and not fw and footer is not None:
+        parts.append(ft.Container(ft.Row([nav], alignment=ft.MainAxisAlignment.CENTER),
+                                  padding=ft.Padding.only(bottom=NAV_GAP)))
     if MOCK_DEVICE:
         parts.append(_home_indicator())
     col = ft.Column(parts, spacing=0, expand=True,
                     horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
-    fw = FRAME_W.get()
     if fw:
         main = ft.Container(col, width=fw)
         if aside is not None:
@@ -380,8 +397,18 @@ def screen(route: str, content: ft.Control, *, top: ft.Control | None = None,
         else:
             layout = ft.Row([main], spacing=0, alignment=ft.MainAxisAlignment.CENTER,
                             vertical_alignment=ft.CrossAxisAlignment.STRETCH, expand=True)
+        if nav is not None:
+            header = ft.Container(ft.Row([nav], alignment=ft.MainAxisAlignment.END),
+                                  padding=ft.Padding.only(left=GUTTER, right=GUTTER, top=12, bottom=4))
+            layout = ft.Column([header, layout], spacing=0, expand=True,
+                               horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
     else:
         layout = col
+    if floating:
+        # Thanh nổi đè lên nội dung; phần trống hai bên thanh vẫn chạm xuyên xuống nội dung bên dưới.
+        dock = ft.Container(ft.Row([nav], alignment=ft.MainAxisAlignment.CENTER),
+                            left=0, right=0, bottom=NAV_GAP)
+        layout = ft.Stack([layout, dock], expand=True, fit=ft.StackFit.EXPAND)
     root: ft.Control = layout if MOCK_DEVICE else ft.SafeArea(layout, expand=True)
     return ft.View(route=route, controls=[backdrop(root)], padding=0, spacing=0, bgcolor=BG)
 

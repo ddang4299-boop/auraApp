@@ -10,7 +10,7 @@ import flet as ft
 
 from ..theme import GLASS_EDGE, GLASS_STRONG, BEIGE, BORDER, INK, MUTED, PRIMARY, TINT, WHITE
 from ..topics import ALL, CONCEPTS, GROUPS, KIND_NAME, TIMELINE, Topic
-from ..ui import (H, T, V, body, bottom_nav, card, cropped_image, icon, kicker, screen,
+from ..ui import (H, T, V, body, NAV_HOME, nav_bar, card, cropped_image, icon, kicker, screen,
                   top_bar)
 
 
@@ -97,7 +97,7 @@ def timeline(app, q) -> ft.View:
         *items,
     ], bottom=24)
     return screen("/timeline", content, top=top_bar("Dòng thời gian", on_back=app.back_handler),
-                  nav=bottom_nav(0, app.go))
+                  nav=nav_bar(app, NAV_HOME))
 
 
 # ---------------------------------------------------------------------------- /concepts
@@ -114,7 +114,7 @@ def concepts(app, q) -> ft.View:
         concept_grid(app, CONCEPTS, app.content_width),
     ], bottom=24)
     return screen("/concepts", content, top=top_bar("Khái niệm chính", on_back=app.back_handler),
-                  nav=bottom_nav(0, app.go))
+                  nav=nav_bar(app, NAV_HOME))
 
 
 # ---------------------------------------------------------------------------- /topic/<id>
@@ -223,4 +223,4 @@ def build(app, q, tid: str = "") -> ft.View:
     ], bottom=24)
     return screen(f"/topic/{t.id}", content,
                   top=top_bar(KIND_NAME[t.kind], on_back=app.back_handler),
-                  nav=bottom_nav(0, app.go))
+                  nav=nav_bar(app, NAV_HOME))

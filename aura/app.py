@@ -12,11 +12,17 @@ import flet as ft
 
 from . import auth
 from .auth import Profile
-from .socratic import Message, ScriptedSocraticEngine, SocraticEngine
+from .data import DEFAULT_ID, PAINTINGS
+from .socratic import (Message, ScriptedSocraticEngine, SocraticEngine, message_from_dict,
+                       message_to_dict)
 from .theme import BG, FONTS, GUTTER, INK, MAX_W, MUTED, PRIMARY
 from .ui import FRAME_W, T, snack
 
 PREFS_KEY = "aura.profile"
+# Cuộc trò chuyện được cất trong bộ nhớ của trình duyệt (localStorage, qua SharedPreferences):
+# lỡ tải lại trang (F5), máy chủ khởi động lại hay mở lại app thì vẫn nói tiếp được đúng chỗ cũ.
+CHATS_KEY = "aura.chats"
+CHATS_VERSION = 1
 APP_VERSION = "1.0.0"
 
 ROOT_ROUTES = {"/", "/home", "/gallery", "/saved"}
@@ -38,6 +44,7 @@ class ChatState:
     thinking: bool = False
     starting: bool = False             # đang lấy lời chào đầu (tránh lấy 2 lần khi màn được dựng lại)
     picked: dict[int, int] = field(default_factory=dict)     # index tin nhắn -> gợi ý đã chọn
+    asked: list[str] = field(default_factory=list)           # câu hỏi nhanh (quick prompt) đã bấm
 
 
 @dataclass
@@ -68,6 +75,7 @@ ROUTES = [
     ("/timeline", "topics", "timeline"),
     ("/concepts", "topics", "concepts"),
     ("/topic/", "topics", "build"),
+    ("/sources/", "sources", "build"),
     ("/", "auth", "welcome"),
 ]
 
@@ -96,6 +104,11 @@ class AuraApp:
                                   linux=fade))
         page.on_route_change = self._on_route_change
         page.on_view_pop = self._on_view_pop
+        # Bản web: người dùng bấm F5 thì Flet nối lại ĐÚNG phiên đang chạy trên máy chủ (dữ liệu còn nguyên)
+        # nhưng trình duyệt vẽ lại từ đầu, vị trí cuộn về 0. Màn đang mở (vd chat) gắn hàm vào on_reconnect
+        # để xử lý lúc đó (chat: cuộn về tin nhắn cuối).
+        self.on_reconnect = None
+        page.on_connect = self._on_connect
         # Lúc mới mở, trình duyệt/điện thoại có thể báo bề rộng tạm (vd 164px) rồi mới báo bề rộng
         # thật: khi bề rộng đổi thì dựng lại các màn để ảnh/lưới tính theo đúng khổ màn hình.
         self._laid_out_width = self.page_width
@@ -110,6 +123,10 @@ class AuraApp:
         self._epoch = 0
         self._url = page.route or "/"
         self._echo: list[str] = []
+        # Bức tranh đang xem: các nút "Tác phẩm", "Hỏi Aura", "Tư liệu" trên thanh điều hướng mở tranh này.
+        self.current_pid = DEFAULT_ID
+        # Báo cho màn chat biết đã đọc xong cuộc trò chuyện cất từ lần trước (xem _restore_chats).
+        self._chats_ready = asyncio.Event()
         page.views.clear()
         self._on_route_change(None)
         page.run_task(self._restore_session)
@@ -163,7 +180,7 @@ class AuraApp:
     @staticmethod
     def _parent(route: str) -> str:
         path = urlsplit(route).path
-        if path.startswith(("/chat/", "/detail/", "/quiz/", "/result/")):
+        if path.startswith(("/chat/", "/detail/", "/quiz/", "/result/", "/sources/")):
             return "/painting/" + path.split("/")[2]
         if path.startswith("/painting/"):
             return "/gallery"
@@ -176,6 +193,8 @@ class AuraApp:
         for prefix, module, fn in ROUTES:
             if path == prefix or (prefix.endswith("/") and prefix != "/" and path.startswith(prefix)):
                 args = [a for a in path[len(prefix):].split("/") if a] if prefix.endswith("/") else []
+                if args and args[0] in PAINTINGS:     # màn của một bức tranh: nhớ tranh đang xem
+                    self.current_pid = args[0]
                 mod = importlib.import_module(f".screens.{module}", __package__)
                 view = self._framed(getattr(mod, fn), query, *args)
                 view.route = route
@@ -238,6 +257,14 @@ class AuraApp:
         views.append(self._build(route))
         self.page.update()
 
+    async def _on_connect(self, e) -> None:
+        hook = self.on_reconnect
+        if hook is not None:
+            try:
+                await hook()
+            except Exception as ex:
+                print(f"[app] on_reconnect lỗi: {ex}")
+
     async def _on_view_pop(self, e) -> None:
         if len(self.page.views) > 1:
             self.page.views.pop()
@@ -264,7 +291,11 @@ class AuraApp:
         return self.state.profile
 
     async def _restore_session(self) -> None:
-        """Tự đăng nhập lại nếu đã lưu hồ sơ ở lần trước."""
+        """Đọc lại cuộc trò chuyện đang dở, rồi tự đăng nhập lại nếu đã lưu hồ sơ ở lần trước."""
+        try:
+            await self._restore_chats()
+        finally:
+            self._chats_ready.set()
         try:
             raw = await self.prefs.get(PREFS_KEY)
         except Exception:
@@ -279,6 +310,73 @@ class AuraApp:
         self.touch()
         if urlsplit(self.page.route or "/").path == "/":
             self.go("/home")
+
+    # ---- lưu cuộc trò chuyện ------------------------------------------------------
+    async def wait_chats(self, timeout: float = 4.0) -> None:
+        """Màn chat chờ đọc xong cuộc trò chuyện cũ (tối đa vài giây) rồi mới quyết định chào mới."""
+        try:
+            await asyncio.wait_for(self._chats_ready.wait(), timeout)
+        except asyncio.TimeoutError:
+            pass
+
+    def save_chats(self) -> None:
+        """Cất các cuộc trò chuyện (gọi sau mỗi lượt). Chỉ cất tranh mà engine xuất được trạng thái,
+        để khi đọc lại, lời trên màn hình và chỗ đang đứng trong kịch bản luôn khớp nhau."""
+        export = getattr(self.engine, "export_session", None)
+        if export is None:
+            return
+        chats = {}
+        for pid, st in self.state.chats.items():
+            eng = export(pid) if st.messages else None
+            if eng is None:
+                continue
+            chats[pid] = {"messages": [message_to_dict(m) for m in st.messages], "stage": st.stage,
+                          "picked": {str(k): v for k, v in st.picked.items()}, "asked": st.asked,
+                          "engine": eng}
+        raw = json.dumps({"v": CHATS_VERSION, "chats": chats}, ensure_ascii=False)
+        self.page.run_task(self._write_pref, CHATS_KEY, raw)
+
+    async def _write_pref(self, key: str, raw: str) -> None:
+        try:
+            await self.prefs.set(key, raw)
+        except Exception as e:        # trình duyệt chặn bộ nhớ (chế độ ẩn danh...): app vẫn chạy bình thường
+            print(f"[app] Không lưu được {key}: {e}")
+
+    async def _restore_chats(self) -> None:
+        importer = getattr(self.engine, "import_session", None)
+        if importer is None:
+            return
+        try:
+            raw = await self.prefs.get(CHATS_KEY)
+            data = json.loads(raw) if raw else None
+        except Exception:
+            data = None
+        if not isinstance(data, dict) or data.get("v") != CHATS_VERSION:
+            return
+        for pid, c in (data.get("chats") or {}).items():
+            st = self.state.chats.get(pid)
+            if pid not in PAINTINGS or (st is not None and st.messages):   # đang chat dở trong phiên này
+                continue
+            try:
+                messages = [message_from_dict(m) for m in c["messages"]]
+                # kịch bản đã đổi (bản cập nhật mới) thì engine từ chối: bỏ bản cũ, chào lại từ đầu
+                if not messages or not importer(PAINTINGS[pid], c.get("engine")):
+                    continue
+                st = self.state.chat(pid)
+                st.messages = messages
+                st.stage = int(c.get("stage") or 0)
+                st.picked = {int(k): int(v) for k, v in (c.get("picked") or {}).items()}
+                st.asked = [str(x) for x in c.get("asked") or []]
+            except Exception as e:    # dữ liệu hỏng: bỏ qua, không làm hỏng app
+                print(f"[app] Bỏ cuộc trò chuyện đã lưu của {pid}: {e}")
+
+    def reset_chat(self, pid: str) -> None:
+        """Bắt đầu lại cuộc trò chuyện của một tranh từ đầu."""
+        self.state.chats.pop(pid, None)
+        reset = getattr(self.engine, "reset", None)
+        if reset is not None:
+            reset(pid)
+        self.save_chats()
 
     async def save_profile(self) -> None:
         self.touch()               # tên / ảnh đại diện có thể đã đổi
@@ -399,10 +497,15 @@ class AuraApp:
 
     def sign_out(self) -> None:
         async def _do():
-            try:
-                await self.prefs.remove(PREFS_KEY)
-            except Exception:
-                pass
+            for key in (PREFS_KEY, CHATS_KEY):     # máy dùng chung: người sau không thấy cuộc trò chuyện cũ
+                try:
+                    await self.prefs.remove(key)
+                except Exception:
+                    pass
+            for pid in list(self.state.chats):
+                reset = getattr(self.engine, "reset", None)
+                if reset is not None:
+                    reset(pid)
             self.state = AppState()
             self.signed_in = False
             self.touch()

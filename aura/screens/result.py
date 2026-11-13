@@ -7,7 +7,7 @@ from ..app import QuizState
 from ..data import DEFAULT_ID, FEELINGS, NEXT_STORY, PAINTINGS
 from ..theme import (BEIGE, BORDER, GOLD, GREEN, GREEN_BG, GREEN_INK, INK, MUTED, PRIMARY, RADIUS,
                      WHITE)
-from ..ui import (H, T, V, body, bottom_nav, card, divider, icon, kicker, painting_strip,
+from ..ui import (H, T, V, body, NAV_PAINTING, nav_bar, card, divider, icon, kicker, painting_strip,
                   primary_button, screen, top_bar)
 from .quiz import feelings_row
 
@@ -129,4 +129,4 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
     ], bottom=25)
     return screen(f"/result/{p.id}", content,
                   top=top_bar("Kết quả & cảm nhận", on_back=app.back_handler),
-                  nav=bottom_nav(1, app.go))
+                  nav=nav_bar(app, NAV_PAINTING))

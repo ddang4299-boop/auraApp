@@ -1,7 +1,7 @@
 # ---- Màu -------------------------------------------------------------------
 BG = "#F6F2E8"          # nền giấy ngà
 INK = "#2F2A26"         # chữ chính
-MUTED = "#796E64"       # chữ phụ
+MUTED = "#6B6056"       # chữ phụ (đậm hơn bản cũ #796E64 để đạt độ tương phản ≥ 4.5:1 trên nền kem)
 PRIMARY = "#772F3D"     # đỏ rượu vang (thương hiệu)
 SURFACE = "#FFFBF2"     # ô nhập liệu, nút viền
 BORDER = "#DBD1C3"      # viền, đường kẻ
@@ -58,4 +58,9 @@ GUTTER = 24             # lề trái/phải
 RADIUS = 8              # bo góc thẻ & nút chữ nhật
 BUTTON_H = 52
 TOP_BAR_H = 36
-NAV_H = 60
+# Thanh điều hướng nổi dạng viên thuốc: nền màu đặc + bóng tĩnh (không làm mờ nền).
+NAV_BG = SURFACE               # nền đặc màu kem sáng
+NAV_ACTIVE_BG = "#EEDFC2"      # nút đang chọn: vàng ấm (chữ/icon đỏ rượu, tương phản 7:1)
+NAV_PILL_H = 54                # chiều cao thanh nổi
+NAV_GAP = 12                   # khoảng hở giữa thanh nổi và mép màn hình
+NAV_CLEAR = NAV_PILL_H + NAV_GAP + 6   # chừa chỗ cuối trang để nội dung không bị thanh che

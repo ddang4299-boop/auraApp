@@ -19,6 +19,8 @@ Gắn vào app (main.py):
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
@@ -93,6 +95,7 @@ class AuraChatbotEngine:
         self._hub_failed = False
         self.fallback = fallback or ScriptedSocraticEngine()
         self._sessions: dict[str, _Session] = {}      # painting.id -> phiên chat
+        self._sigs: dict[str, str] = {}               # script_id -> dấu vân tay nội dung kịch bản
 
     # ------------------------------------------------------------------ SocraticEngine
     async def start(self, painting: Painting) -> AuraTurn:
@@ -120,6 +123,48 @@ class AuraChatbotEngine:
         r = await self._run(self.hub.step, session.state, user_input)
         session.replies += 1
         return self._to_turn(painting, session, r, ack=self._ack(session, r, nav))
+
+    # ------------------------------------------------------------------ lưu / đọc lại phiên
+    def export_session(self, painting_id: str) -> Optional[dict]:
+        """Trạng thái phiên chat dạng JSON để app cất vào bộ nhớ trình duyệt (None: không có gì để cất)."""
+        s = self._sessions.get(painting_id)
+        if s is None:
+            return None
+        return {"script": s.script_id, "sig": self._sig(s.script_id), "state": s.state, "chips": s.chips,
+                "last_branch": s.last_branch, "replies": s.replies, "ack_i": s.ack_i}
+
+    def import_session(self, painting: Painting, data: Optional[dict]) -> bool:
+        """Nạp lại phiên đã cất. Từ chối (False) khi kịch bản đã đổi kể từ lúc cất: chỗ đang đứng
+        trong kịch bản cũ có thể không còn, nói tiếp sẽ lệch, nên để app chào lại từ đầu."""
+        if not isinstance(data, dict) or not isinstance(data.get("state"), dict):
+            return False
+        script_id = self._script_for(painting)
+        if not script_id or data.get("script") != script_id or data.get("sig") != self._sig(script_id):
+            return False
+        self._sessions[painting.id] = _Session(script_id, data["state"], list(data.get("chips") or []),
+                                               data.get("last_branch"), int(data.get("replies") or 0),
+                                               int(data.get("ack_i") or 0))
+        return True
+
+    def reset(self, painting_id: str) -> None:
+        """Quên phiên chat của tranh (người dùng bấm "Bắt đầu lại" hoặc đăng xuất)."""
+        self._sessions.pop(painting_id, None)
+
+    def knowledge(self, painting: Painting) -> list[Info]:
+        """Kho tư liệu chatbot dựa vào để trả lời (các thẻ context của kịch bản), cho màn Tư liệu."""
+        script_id = self._script_for(painting)
+        if not script_id:
+            return []
+        items = self.hub.engine(script_id).contexts
+        return [Info(c.get("topic") or code, c.get("content") or "") for code, c in items.items()
+                if c.get("content")]
+
+    def _sig(self, script_id: str) -> str:
+        if script_id not in self._sigs:
+            data = self.hub.engine(script_id).d
+            raw = json.dumps(data, ensure_ascii=False, sort_keys=True).encode("utf-8")
+            self._sigs[script_id] = hashlib.sha1(raw).hexdigest()[:16]
+        return self._sigs[script_id]
 
     # ------------------------------------------------------------------ internals
     @property

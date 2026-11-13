@@ -5,7 +5,7 @@ import flet as ft
 
 from ..data import DEFAULT_ID, PAINTINGS
 from ..theme import GLASS, GLASS_EDGE, GLASS_STRONG, BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
-from ..ui import (H, T, V, body, bottom_nav, cropped_image, icon, kicker, screen, top_bar)
+from ..ui import (H, T, V, body, NAV_PAINTING, nav_bar, cropped_image, icon, kicker, screen, top_bar)
 
 ZOOMS = [1, 2, 3, 4]
 BASE_ZOOM = 2            # vùng crop trong dữ liệu tương ứng mức 2×
@@ -89,4 +89,4 @@ def build(app, q, pid: str = DEFAULT_ID, key: str = "") -> ft.View:
     ], bottom=25)
     return screen(f"/detail/{p.id}/{d.key}", content,
                   top=top_bar("Chi tiết tranh", on_back=app.back_handler, leading="x"),
-                  nav=bottom_nav(1, app.go))
+                  nav=nav_bar(app, NAV_PAINTING))

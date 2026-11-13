@@ -171,10 +171,13 @@
         if (finished) return clearInterval(tick);
         if (value < cap - 0.5) { value += Math.max(0.15, (cap - value) * 0.035); draw(); }
         var waited = (Date.now() - t0) / 1000;
+        // Mở nhanh (máy chủ đang thức) thì không hiện gì; chờ lâu mới giải thích, tăng dần theo thời gian.
         if (waited > 45) {
           hint.innerHTML = 'Mạng đang chậm hoặc máy chủ đang bận. Bạn có thể <a href="">tải lại trang</a>.';
         } else if (waited > 12) {
-          hint.textContent = 'Lần mở đầu tiên cần tải bộ hiển thị (vài MB), sau đó sẽ nhanh hơn. Cảm ơn bạn đã chờ.';
+          hint.textContent = 'Server đang khởi động và trình duyệt đang tải bộ hiển thị (vài MB). Những lần sau sẽ nhanh hơn, cảm ơn bạn đã kiên nhẫn chờ.';
+        } else if (waited > 2.5) {
+          hint.textContent = 'Server đang khởi động lần đầu, có thể mất một chút thời gian…';
         }
       }, 120);
 

@@ -28,7 +28,7 @@ Cấu hình đóng gói nằm trong `pyproject.toml`.
 
 ## Đưa lên mạng cho người khác dùng thử (có AI)
 
-Chạy app trên máy chủ Render (miễn phí), key AI giữ trên máy chủ: xem [DEPLOY.md](DEPLOY.md).
+Chạy app trên máy chủ Render (miễn phí), key AI giữ trên máy chủ: xem [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Cấu trúc
 
@@ -36,17 +36,21 @@ Chạy app trên máy chủ Render (miễn phí), key AI giữ trên máy chủ:
 main.py                 Điểm khởi chạy
 aura/
   theme.py              Màu, font, kích thước (lấy từ bản thiết kế)
-  ui.py                 Component dùng chung: chữ, nút, chip, thẻ, top bar, thanh điều hướng
-  data.py               Nội dung: tranh, mốc thời gian, khái niệm, quiz
-  socratic.py           Bộ não hội thoại Socrates (interface + kịch bản mẫu)
+  ui.py                 Component dùng chung: chữ, nút, chip, thẻ, top bar, thanh điều hướng nổi
+  data.py               Nội dung tranh: thông tin, chi tiết, quiz, câu hỏi nhanh dưới ô chat
+  topics.py             Nội dung trang Khám phá: thời kỳ, mốc thời gian, khái niệm
+  socratic.py           Interface hội thoại (AuraTurn...) + kịch bản mẫu dự phòng + lưu/đọc lịch sử chat
   auth.py               Đăng nhập Google (OAuth 2.0 + PKCE)
-  app.py                Điều hướng, trạng thái, phiên đăng nhập
+  app.py                Điều hướng, trạng thái, phiên đăng nhập, lưu cuộc trò chuyện vào trình duyệt
   screens/
     auth.py             Chào mừng (đăng nhập Google hoặc bỏ qua)
     home.py             Khám phá
+    topics.py           Mốc thời gian, khái niệm, bài đọc chủ đề
     gallery.py          Kho tranh · Đã lưu
     painting.py         Tổng quan tranh
-    chat.py             Hỏi Aura (trò chuyện Socrates)
+    viewer.py           Xem tranh phóng to
+    chat.py             Hỏi Aura (trò chuyện Socrates, câu hỏi nhanh, bắt đầu lại)
+    sources.py          Tư liệu: các thẻ tư liệu chatbot dựa vào khi trả lời
     detail.py           Chi tiết tranh (phóng to)
     quiz.py             Quiz & cảm nhận
     result.py           Kết quả & cảm nhận
@@ -54,12 +58,20 @@ aura/
 Chatbot/                Chatbot Socrates chạy theo kịch bản JSON
   aura_adapter.py       Cầu nối chatbot với màn chat (AuraChatbotEngine)
   engine.py, hub.py     Bộ máy chạy kịch bản, chọn tranh
-  llm.py                Gọi LLM (tuỳ chọn) để hiểu câu gõ tự do
+  qa.py                 Trả lời câu hỏi gõ tay dựa trên tư liệu của tranh (RAG) rồi bắc cầu về câu đang hỏi
+  llm.py                Gọi LLM (tuỳ chọn), nhiều key / nhiều nhà cung cấp dự phòng
+  library.py            Đọc và kiểm tra các file kịch bản
+  cli_demo.py           Chat thử chatbot ngay trong terminal
+  doctor.py             Kiểm tra key và model dùng được
+  build_hints.py        Sinh sẵn gợi ý cho từng câu hỏi trong kịch bản
   scripts/              Kịch bản: mỗi tranh một file <Tên_tranh>.json
-cli_demo.py             Chat thử chatbot ngay trong terminal
-assets/                 Font, icon (Lucide), ảnh tranh
+assets/                 Font, icon (Lucide), ảnh tranh, trang khung bản web (index.html)
 tests/                  Kiểm thử luồng đăng nhập OAuth
-docs/BAO_CAO.md         Báo cáo quá trình xây dựng giao diện
+docs/
+  DEPLOY.md             Hướng dẫn đưa app lên Render
+  BAO_CAO.md            Báo cáo quá trình xây dựng giao diện
+render.yaml             Cấu hình máy chủ Render
+requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server), phát triển (-dev)
 ```
 
 ## Các màn hình và đường dẫn
@@ -68,12 +80,19 @@ docs/BAO_CAO.md         Báo cáo quá trình xây dựng giao diện
 |---|---|
 | `/` | Chào mừng / đăng nhập |
 | `/home` | Khám phá (avatar góc phải → Hồ sơ) |
-| `/gallery`, `/saved` | Kho tranh, Đã lưu |
+| `/timeline`, `/concepts`, `/topic/<id>` | Mốc thời gian, Khái niệm, bài đọc chủ đề |
+| `/gallery`, `/saved` | Kho tranh, Đã lưu (biểu tượng dấu trang góc phải Kho tranh) |
 | `/painting/<id>` | Tổng quan tranh |
 | `/chat/<id>` | Hỏi Aura |
+| `/sources/<id>` | Tư liệu chatbot dùng để trả lời |
 | `/detail/<id>/<chi-tiết>` | Chi tiết tranh |
 | `/quiz/<id>`, `/result/<id>` | Quiz & cảm nhận, Kết quả |
 | `/profile` | Hồ sơ cá nhân |
+
+Thanh điều hướng nổi (dạng viên thuốc) có 4 nút: **Khám phá**, **Tác phẩm**, **Hỏi Aura**, **Tư liệu**;
+ba nút sau mở bức tranh đang xem. Điện thoại: thanh nổi ở cạnh dưới. Máy tính: thanh nằm ở góc trên bên phải.
+Cuộc trò chuyện được cất trong bộ nhớ của trình duyệt nên tải lại trang (F5) vẫn nói tiếp đúng chỗ;
+nút **Bắt đầu lại** trong màn chat xoá để trò chuyện từ đầu, đăng xuất cũng xoá.
 
 ## Chatbot theo kịch bản
 
@@ -87,7 +106,7 @@ docs/BAO_CAO.md         Báo cáo quá trình xây dựng giao diện
   trong `aura/data.py` (ví dụ `"BRANCH_2A": "face"`).
 
 ```bash
-python cli_demo.py                  # chat thử trong terminal
+python -m Chatbot.cli_demo          # chat thử trong terminal
 pip install -r requirements-dev.txt # thư viện LLM (tuỳ chọn), rồi điền key vào .env
 python -m Chatbot.doctor            # kiểm tra key và model dùng được
 ```

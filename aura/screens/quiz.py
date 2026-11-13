@@ -9,7 +9,7 @@ from ..app import QuizState
 from ..data import DEFAULT_ID, FEELINGS, PAINTINGS, Painting, QuizQuestion
 from ..theme import (BEIGE, BORDER, GOLD, GREEN, GREEN_BG, GREEN_INK, INK, MUTED, PRIMARY, RADIUS,
                      RED, SURFACE, TINT, WHITE, WHY_BG, WHY_BORDER, WHY_INK)
-from ..ui import (H, T, V, body, bottom_nav, cropped_image, divider, icon, kicker,
+from ..ui import (H, T, V, body, NAV_PAINTING, nav_bar, cropped_image, divider, icon, kicker,
                   painting_strip, primary_button, screen, surface_field, text_link, top_bar)
 
 # (x, y, rộng, cao, góc, màu) — mảnh giấy hoa trang trí khi làm đúng hết
@@ -292,4 +292,4 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         holder,
     ], bottom=35)
     return screen(f"/quiz/{p.id}", content, top=top_bar("Quiz & cảm nhận", on_back=app.back_handler),
-                  nav=bottom_nav(1, app.go))
+                  nav=nav_bar(app, NAV_PAINTING))

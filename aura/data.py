@@ -69,6 +69,9 @@ class Painting:
     museum: str = ""
     # Nhánh trong kịch bản chatbot (Chatbot/scripts/*.json) -> key của Detail để đính kèm ảnh
     chat_branches: dict[str, str] = field(default_factory=dict)
+    # Câu hỏi nhanh dưới ô chat (giọng người xem hỏi AURA), giúp người mới có chỗ bắt đầu.
+    # Nên chọn câu mà kho tư liệu của tranh trả lời được.
+    quick_prompts: list[str] = field(default_factory=list)
 
 
 # Hội thoại của tranh này do kịch bản Chatbot/scripts/Mona_Lisa.json điều khiển.
@@ -123,6 +126,15 @@ MONA_LISA = Painting(
     museum=LOUVRE,
     chat_branches={"BRANCH_2A": "face", "BRANCH_2B": "hands", "BRANCH_2C": "dress",
                    "BRANCH_2D": "landscape", "BRANCH_3C": "landscape"},
+    # mỗi câu khớp một thẻ trong kho tư liệu của kịch bản (C1, C2, C8, C4, C5, C9, C7)
+    quick_prompts=["Người phụ nữ trong tranh là ai?",
+                   "Bức tranh được vẽ khi nào?",
+                   "Vì sao bức tranh này nổi tiếng?",
+                   "Sfumato là kỹ thuật gì?",
+                   "Màu sắc trong tranh có ý nghĩa gì?",
+                   "Phong cảnh phía sau có gì đặc biệt?",
+                   "Leonardo da Vinci là người thế nào?",
+                   "Trang phục nói gì về địa vị của bà?"],
 )
 
 # Thêm tranh: khai báo một Painting như MONA_LISA rồi đưa vào các danh sách dưới đây.

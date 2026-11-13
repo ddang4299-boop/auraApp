@@ -74,12 +74,13 @@ Chỉ trả về MỘT JSON: {{"offtopic": "", "answer": "...", "source": "notes
 - guess: cảm nhận / phỏng đoán của chính người xem nằm trong câu hỏi, vài chữ; nếu họ chỉ hỏi thông tin thì "".
 - option_id: có guess thì chọn gợi ý gần nghĩa nhất với guess, chỉ để null khi không gợi ý nào gần. Không có guess
   thì chọn gợi ý mà câu hỏi nhắm tới (note của gợi ý đó trả lời đúng câu hỏi); không rõ thì null.
-- followup: LUÔN viết (kể cả khi offtopic). MỘT câu hỏi ngắn kiểu Socrates: gợi mở, không có đáp án đúng sai, nối
-  từ điều người xem vừa hỏi sang ĐÚNG ý của current_question để họ quay lại nhìn tranh. Giữ nguyên điều
-  current_question muốn hỏi (các gợi ý trả lời vẫn phải hợp) và giữ lại các chữ chính của nó (vd "ánh mắt",
-  "chi tiết", "ấn tượng"), chỉ đổi cách dẫn cho gắn với câu họ vừa hỏi.
-  Dưới 30 chữ, kết thúc bằng "?", không lặp lại answer, không nêu sẵn đáp án, không liệt kê khả năng kiểu "A hay B?",
-  không hỏi kiểu có/không ("...phải không?").
+- followup: LUÔN viết (kể cả khi offtopic). Đây là câu "bắc cầu" kéo người xem về lại bức tranh: có thể mở đầu
+  bằng một vế dẫn ngắn nối điều họ vừa hỏi với chi tiết đang xem (vd "Quay lại đôi mắt của cô ấy,", "Còn trong
+  tranh thì sao:"), rồi MỘT câu hỏi kiểu Socrates: gợi mở, không có đáp án đúng sai, hỏi ĐÚNG ý của
+  current_question. Giữ nguyên điều current_question muốn hỏi (các gợi ý trả lời vẫn phải hợp) và giữ lại các chữ
+  chính của nó (vd "ánh mắt", "chi tiết", "ấn tượng"). Vế dẫn không thêm thông tin mới, không nói thay ý định của
+  họa sĩ. Dưới 35 chữ, chỉ một dấu "?" ở cuối, không lặp lại answer, không nêu sẵn đáp án, không liệt kê khả năng
+  kiểu "A hay B?", không hỏi kiểu có/không ("...phải không?").
 
 Ví dụ, current_question hỏi ánh mắt cô ấy khiến bạn cảm thấy thế nào, options có {{"id": "A", "label": "Dịu dàng"}}
 và {{"id": "E", "label": "Có phần lạnh lùng"}}:
@@ -225,6 +226,8 @@ class ScriptQA:
                     # AI chọn mục tư liệu nhưng câu trả lời của chính nó lại nói chuyện khác (vd hỏi người mẫu có
                     # nổi tiếng không, AI trả lời về Lisa mà chọn mục "Danh tiếng" của bức tranh): không dùng mục đó
                     cid = None
+                if cid:
+                    src = "notes"         # người xem thấy nguyên văn thẻ tư liệu của nhóm, không phải lời AI
                 return QAResult(ans, src, oid, follow, curated_id=cid)
             except Exception:
                 busy = True               # AI lỗi / hết lượt: dùng cách trích dẫn bên dưới
@@ -274,7 +277,7 @@ class ScriptQA:
     def _followup(raw) -> str:
         """Câu hỏi gợi mở do AI viết: chỉ nhận đúng MỘT câu hỏi ngắn, gọn, không lộ chuyện nội bộ."""
         f = re.sub(r"\s+", " ", str(raw or "")).strip().strip('"“”')
-        if not (15 <= len(f) <= 220) or not f.endswith("?") or f.count("?") != 1:
+        if not (15 <= len(f) <= 240) or not f.endswith("?") or f.count("?") != 1:
             return ""
         if re.search(r"ghi chú|\bnote|option|lựa chọn|gợi ý|current_question", f, re.I):
             return ""

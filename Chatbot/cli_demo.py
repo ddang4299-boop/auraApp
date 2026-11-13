@@ -1,4 +1,4 @@
-"""python cli_demo.py -> tự quét folder scripts/, chọn tranh, chat thử trong terminal.
+"""python -m Chatbot.cli_demo -> tự quét folder scripts/, chọn tranh, chat thử trong terminal.
 Có key trong .env thì dùng LLM, không thì chạy keyword offline.
 Gõ SỐ để bấm chip gợi ý (chip thay cho tin nhắn của bạn), hoặc gõ chữ tự do. 'q' để kết thúc."""
 import json

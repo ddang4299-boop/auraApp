@@ -7,7 +7,7 @@ import flet as ft
 
 from ..data import FEATURED, FILTERS, GRID, PAINTINGS, Painting
 from ..theme import GLASS, GLASS_EDGE, GLASS_STRONG, MAT_BG, BEIGE, BORDER, INK, MUTED, PRIMARY, RADIUS, SURFACE, WHITE
-from ..ui import (H, T, V, body, bottom_nav, card, chip, framed_image, icon, primary_button,
+from ..ui import (H, T, V, body, NAV_HOME, nav_bar, card, chip, framed_image, icon, primary_button,
                   screen, surface_field, tag, top_bar)
 
 FEATURED_W = 266
@@ -185,8 +185,9 @@ def build(app, q) -> ft.View:
         V(15.6),
         T("Ảnh: Wikimedia Commons (tranh thuộc phạm vi công cộng)", 11, 400, MUTED),
     ], bottom=25.4)
-    return screen("/gallery", content, top=top_bar("Kho tranh", on_back=app.back_handler),
-                  nav=bottom_nav(1, app.go))
+    return screen("/gallery", content, top=top_bar("Kho tranh", on_back=app.back_handler, trailing="bookmark",
+                                    on_trailing=lambda e: app.go("/saved")),
+                  nav=nav_bar(app, NAV_HOME))
 
 
 def saved(app, q) -> ft.View:
@@ -214,4 +215,4 @@ def saved(app, q) -> ft.View:
         *main,
     ], bottom=25)
     return screen("/saved", content, top=top_bar("Đã lưu", on_back=app.back_handler),
-                  nav=bottom_nav(2, app.go))
+                  nav=nav_bar(app, NAV_HOME))

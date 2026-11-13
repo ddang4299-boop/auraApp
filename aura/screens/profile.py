@@ -7,7 +7,7 @@ from .. import auth
 from ..app import APP_VERSION
 from ..theme import (BEIGE, BORDER, GREEN, GREEN_INK, INK, MUTED, PRIMARY, RADIUS, RED, SURFACE,
                      TINT, WHITE)
-from ..ui import (H, T, V, avatar, body, bottom_nav, bottom_sheet, card, divider, icon, kicker,
+from ..ui import (H, T, V, avatar, body, NAV_HOME, nav_bar, bottom_sheet, card, divider, icon, kicker,
                   primary_button, screen, snack, surface_field, top_bar)
 
 ABOUT_APP = ("AURA giúp bạn cảm nhận tranh Phục Hưng bằng cách nhìn chậm và trò chuyện. Thay vì "
@@ -182,4 +182,4 @@ def build(app, q) -> ft.View:
         T("AURA · Nhìn chậm, hỏi nhiều hơn.", 11, 400, MUTED, align=ft.TextAlign.CENTER),
     ], bottom=28)
     return screen("/profile", content, top=top_bar("Hồ sơ của bạn", on_back=app.back_handler),
-                  nav=bottom_nav(0, app.go))
+                  nav=nav_bar(app, NAV_HOME))

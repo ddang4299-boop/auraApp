@@ -58,14 +58,14 @@ HEDGE_RE = re.compile(r"có lẽ|có thể là|chắc là|hình như|theo (mình
 LIMIT_MSG = ("Câu này nằm ngoài phần tư liệu mình có về bức tranh, nên mình xin không đoán. "
              "Mình cùng quay lại câu hỏi đang dở nhé.")
 OFFTOPIC_MSG = "Mình hiểu rồi. Mình cùng quay lại câu hỏi đang dở nhé."
-BUSY_MSG = ("Lúc này AI của mình đang quá tải nên chưa trả lời kỹ câu này được, bạn thử hỏi lại sau ít phút nhé. "
-            "Giờ mình cùng quay lại câu hỏi đang dở.")
+BUSY_MSG = ("Câu này mình cần tra kỹ hơn, mà lúc này kết nối AI đang chậm, bạn hỏi lại sau ít phút nhé. "
+            "Trong lúc chờ, mình cùng quay lại câu hỏi đang dở.")
 # Hỏi đáp (xem qa.py): lời dẫn theo nguồn của câu trả lời, và theo việc có "lái" sang hướng mới không
 QA_LEAD = {"notes": "Mình tra trong tư liệu về bức tranh và tìm được điều này.",
            "general": "Câu này nằm ngoài tư liệu của bức tranh, mình trả lời theo hiểu biết chung nhé."}
 QA_TOPIC = {"notes": "Trả lời từ tư liệu của tranh", "general": "Ngoài tư liệu của bức tranh"}
 QA_STAY = "Xem xong, mình cùng quay lại câu hỏi đang dở nhé."
-OFFTOPIC_LEAD = "Câu này nằm ngoài bức tranh nên mình xin phép không trả lời nhé."
+OFFTOPIC_LEAD = "Câu hỏi thú vị đấy! Có điều nó nằm ngoài bức tranh, nên mình xin phép không đi theo hướng này."
 QA_STEER = "Câu hỏi của bạn khá gần với hướng “{label}”, mình cùng đi tiếp theo hướng đó nhé."
 BRIDGE_Q = "Điều vừa đọc gợi cho bạn thêm suy nghĩ gì về những gì bạn đã quan sát?"
 UNSURE_ACKS = ["Không sao, bạn cứ nói điều đầu tiên bạn nhận ra nhé.",

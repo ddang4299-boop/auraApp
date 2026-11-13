@@ -11,7 +11,7 @@ thẻ tổng kết, trích nguồn.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Protocol
 
 from .data import Painting
@@ -69,6 +69,32 @@ class Message:
     role: str                        # "aura" | "user"
     text: str
     turn: AuraTurn | None = None
+
+
+# ---- Lưu / đọc lại cuộc trò chuyện (dạng JSON, cất trong bộ nhớ của trình duyệt) ----------------
+
+def message_to_dict(m: Message) -> dict:
+    return {"role": m.role, "text": m.text, "turn": asdict(m.turn) if m.turn is not None else None}
+
+
+def message_from_dict(d: dict) -> Message:
+    t = d.get("turn")
+    turn = None
+    if t:
+        att = t.get("attachment")
+        turn = AuraTurn(
+            paragraphs=[str(x) for x in t.get("paragraphs") or []],
+            choices=[Choice(c["label"], c.get("message")) for c in t.get("choices") or []],
+            stage=int(t.get("stage") or 0),
+            attachment=DetailAttachment(att["detail_key"], tuple(att["crop"]),
+                                        att.get("label") or "Chi tiết tác phẩm") if att else None,
+            summary=Summary(**t["summary"]) if t.get("summary") else None,
+            source=t.get("source"),
+            done=bool(t.get("done")),
+            infos=[Info(i["topic"], i["text"], bool(i.get("general"))) for i in t.get("infos") or []],
+            info_at=int(t.get("info_at") or 0),
+        )
+    return Message(str(d["role"]), str(d.get("text") or ""), turn)
 
 
 class SocraticEngine(Protocol):
