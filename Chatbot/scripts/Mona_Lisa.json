@@ -145,12 +145,12 @@
     "items": {
       "C1": {
         "topic": "Danh tính người mẫu",
-        "content": "Người phụ nữ thường được xác định là Lisa Gherardini (1479–1542), vợ của thương nhân buôn lụa Francesco del Giocondo ở Florence, vì vậy ở Ý bức tranh còn được gọi là “La Gioconda”, ở Pháp là “La Joconde”. Bà lấy chồng năm 1495 và có nhiều con; khi Leonardo bắt đầu vẽ (khoảng năm 1503), bà khoảng 24 tuổi.",
+        "content": "Người phụ nữ thường được xác định là Lisa Gherardini (1479–1542), vợ của thương nhân buôn lụa Francesco del Giocondo ở Florence, vì vậy ở Ý bức tranh còn được gọi là “La Gioconda”, ở Pháp là “La Joconde”. Bà lấy chồng năm 1495 và có nhiều con; khi Leonardo bắt đầu vẽ (khoảng năm 1503), bà khoảng 24 tuổi. Bà sống cả đời ở Florence và mất tại đây năm 1542.",
         "trigger_condition": "Hỏi về danh tính"
       },
       "C2": {
         "topic": "Lịch sử sáng tác",
-        "content": "Leonardo da Vinci bắt đầu vẽ khoảng năm 1503 ở Florence và tiếp tục chỉnh sửa trong nhiều năm. Ông không giao tranh cho gia đình người mẫu mà giữ bên mình, mang theo khi sang Pháp vào cuối đời; về sau bức tranh thuộc bộ sưu tập của vua Pháp.",
+        "content": "Leonardo da Vinci bắt đầu vẽ khoảng năm 1503 ở Florence và tiếp tục chỉnh sửa trong nhiều năm. Nhiều khả năng chính chồng bà, thương nhân Francesco del Giocondo, đã đặt Leonardo vẽ chân dung này. Ông không giao tranh cho gia đình người mẫu mà giữ bên mình, mang theo khi sang Pháp vào cuối đời; về sau bức tranh thuộc bộ sưu tập của vua Pháp.",
         "trigger_condition": "Hỏi về thời gian hoặc hoàn cảnh sáng tác (kết hợp C3)"
       },
       "C3": {

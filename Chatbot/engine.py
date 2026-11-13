@@ -45,8 +45,13 @@ QUESTION_RE = re.compile(r"\?|là gì|là ai|vì sao|khi nào|tại sao|sao lạ
                          r"muốn khám phá về|kể cho|cho mình biết|cho tôi biết|giải thích|bao nhiêu|ở đâu|"
                          r"bao giờ|như thế nào|ra sao|có phải|hay không|(^|\s)ai(\s|$)|"
                          r"(phải|đúng|thật|vậy) (không|ko|k|hông|hok)(?!\w)|"   # cả viết tắt "đúng ko"
+                         r"thắc mắc (là|về|không biết)|tò mò (là|về|không biết)|"
+                         r"(không|ko|hông) mà (được|lại|bị)|"                    # "có nổi tiếng ko mà được vẽ"
                          r"\S+ hay (?!đấy|quá|ghê|thật|lắm|nhỉ|đó)\S+\s*$|"   # "đậm hay nhạt" (không phải "hay quá")
                          r"\bcó\b.*\b(không|ko|hông)\s*$")
+# Lời xin kể về một chủ đề (vd "mình muốn tìm hiểu bối cảnh"): hiện nguyên thẻ tư liệu của nhóm thay vì trả lời ngắn
+REQUEST_RE = re.compile(r"muốn biết|muốn tìm hiểu|muốn khám phá về|kể cho|kể về|cho mình biết|cho tôi biết|"
+                        r"giải thích|nói thêm về|thông tin về", re.I)
 # Câu có dấu "?" nhưng thật ra là ý kiến của người dùng (vd "Mình nghĩ cô ấy đang buồn?")
 HEDGE_RE = re.compile(r"có lẽ|có thể là|chắc là|hình như|theo (mình|tôi|em|tớ)|"
                       r"(mình|tôi|em|tớ|tui) (nghĩ|thấy|đoán|cảm thấy|cho là)", re.I)
@@ -234,6 +239,23 @@ class Engine:
         #      không đứng lại lặp lời chào ----
         plain_question = bool(QUESTION_RE.search(text.lower())) and not contexts \
             and not sig["detail_branch"] and not sig["emotion_letter"]
+        low = text.lower()
+        curated = [c for c in contexts if c["code"] in set(sig.get("kw_context") or [])]
+        # Câu hỏi GÕ TAY khi có AI: trả lời thẳng điều được hỏi, thẻ khớp từ khoá chỉ làm căn cứ ưu tiên.
+        # Từ khoá dễ khớp nhầm ("bà này có nổi tiếng ko mà được vẽ" khớp thẻ "Danh tiếng" của BỨC TRANH).
+        # Bấm chip / xin kể về một chủ đề thì vẫn hiện nguyên thẻ tư liệu của nhóm.
+        direct_qa = bool(self.llm) and not from_chip and not REQUEST_RE.search(low)
+        asks_info = bool(QUESTION_RE.search(low) or sig["asks_unknown"] or sig["asks_context"])
+        opening_q = (node["id"] == "OPENING" and direct_qa and asks_info
+                     and not sig["detail_branch"] and not sig["emotion_letter"])
+        if opening_q:
+            # ở câu chào mà hỏi / xin thông tin cụ thể (vd "cô ấy làm công việc gì á"): trả lời thẳng rồi vào Q1
+            res = self.qa.ask(text, None, [], self.llm, qtext=qn.get("text", ""), priority=self._prio(curated))
+            if res and res.answer:
+                cards, keep = self._qa_cards(res, curated)
+                self._unmark(s, contexts, shown_before, keep)
+                s["node"] = self._resolve(s, node["after"], node, sig)
+                return self._pack(s, QA_LEAD[res.source], cards, sig=sig)
         if node["id"] == "OPENING" and (not sig["answers_current"] or plain_question):
             ack = "" if contexts else (f"Đây là bức {self.title} của {self.artist}. Mình sẽ kể thêm khi bạn "
                                        "cần; trước hết, mình cùng nhìn tranh một chút nhé.")
@@ -242,12 +264,11 @@ class Engine:
 
         # ---- user hỏi ngược / nói chuyện khác, chưa trả lời câu hiện tại: KHÔNG coi là câu trả lời ----
         if not sig["answers_current"] and not opt:
-            curated = [c for c in contexts if c["code"] in set(sig.get("kw_context") or [])]
-            asked = bool(sig["asks_unknown"] or QUESTION_RE.search(text.lower()) or contexts)
-            if asked and not curated:
+            asked = bool(sig["asks_unknown"] or QUESTION_RE.search(low) or contexts)
+            if asked and (not curated or direct_qa):
                 # Không có mục tư liệu khớp chắc theo luật từ khoá của nhóm: tra cứu toàn bộ ghi chú (RAG)
                 # để trả lời, rồi lái theo gợi ý trả lời mà câu hỏi nghiêng về (nếu có).
-                packed = self._answer_question(s, node, qn, text, sig, contexts, shown_before)
+                packed = self._answer_question(s, node, qn, text, sig, contexts, shown_before, curated)
                 if packed:
                     return packed
             if not contexts:
@@ -272,12 +293,13 @@ class Engine:
         s["node"] = new_node
         return self._pack(s, "", contexts, sig=sig, feedback=feedback)
 
-    def _answer_question(self, s, node, qn, text, sig, contexts, shown_before) -> Optional[dict]:
+    def _answer_question(self, s, node, qn, text, sig, contexts, shown_before, curated=()) -> Optional[dict]:
         """Trả lời câu hỏi bằng tư liệu tra được (hoặc kiến thức chung về nghệ thuật) và lái hội thoại."""
         is_q = node["type"] == "question" and node["id"] not in NO_UNSURE
         options = [o for o in qn.get("options", []) if "free input" not in o["label"].lower()]
         res = self.qa.ask(text, node["id"] if is_q else None, options if is_q else [], self.llm,
-                          qtext=qn.get("text") or node.get("text") or "")
+                          qtext=qn.get("text") or node.get("text") or "",
+                          priority=self._prio(curated))
         if not res:
             return None
         if res.source == "busy":           # AI quá tải: có tư liệu khớp thì vẫn hiện (cầu nối), không thì báo bận
@@ -285,13 +307,11 @@ class Engine:
                 return None
             self._rotate(s, node)
             return self._pack(s, BUSY_MSG, [], sig=sig)
-        for c in contexts:                 # tư liệu AI chọn nhưng không hiện ra: để dành cho lần sau
-            if c["code"] not in shown_before and c["code"] in s["contexts_shown"]:
-                s["contexts_shown"].remove(c["code"])
+        cards, keep = self._qa_cards(res, curated)
+        self._unmark(s, contexts, shown_before, keep)
         if res.offtopic:                   # lạc đề hẳn: từ chối nhẹ, rồi câu hỏi gợi mở kéo về lại bức tranh
             self._rotate(s, node)
             return self._pack(s, OFFTOPIC_LEAD, [], sig=sig, ask_text=res.followup)
-        card = {"code": "QA", "source": res.source, "topic": QA_TOPIC[res.source], "content": res.answer}
         lead = QA_LEAD[res.source]
         steer = next((o for o in options if o["id"] == res.option_id), None) if is_q else None
         if steer and (steer.get("next") or {}).get("type") != "end":
@@ -303,12 +323,33 @@ class Engine:
             if new_node["type"] == "end":
                 return self._finish(s, res.answer)
             s["node"] = new_node
-            return self._pack(s, f"{lead} {QA_STEER.format(label=steer['label'])}", [card], sig=sig)
+            return self._pack(s, f"{lead} {QA_STEER.format(label=steer['label'])}", cards, sig=sig)
         self._rotate(s, node)
         if res.followup:
             # AI hỏi lại theo kiểu Socrates, nối từ điều họ vừa hỏi sang đúng ý câu đang dở (gợi ý trả lời vẫn hợp)
-            return self._pack(s, lead, [card], sig=sig, ask_text=res.followup)
-        return self._pack(s, f"{lead} {QA_STAY}", [card], sig=sig)
+            return self._pack(s, lead, cards, sig=sig, ask_text=res.followup)
+        return self._pack(s, f"{lead} {QA_STAY}", cards, sig=sig)
+
+    def _prio(self, curated) -> list:
+        """Mục tư liệu khớp từ khoá, kèm điều kiện hiện của nhóm ("when") để AI xét có đúng loại câu hỏi không."""
+        return [{"id": c["code"], "topic": c["topic"], "content": c["content"],
+                 "when": (self.contexts.get(c["code"]) or {}).get("trigger_condition", "")} for c in curated]
+
+    @staticmethod
+    def _qa_cards(res, curated) -> tuple:
+        """Thẻ hiện cho câu trả lời: mục tư liệu của nhóm (nguyên văn) nếu AI xác nhận nó trả lời đúng ý câu hỏi,
+        không thì câu trả lời ngắn do AI viết. Trả về (thẻ, mã tư liệu được dùng)."""
+        ctx = next((c for c in curated if c["code"] == res.curated_id), None)
+        if ctx:
+            return [ctx], ctx["code"]
+        return [{"code": "QA", "source": res.source, "topic": QA_TOPIC[res.source], "content": res.answer}], None
+
+    @staticmethod
+    def _unmark(s, contexts, shown_before, keep=None) -> None:
+        """Tư liệu đã chọn nhưng không hiện thành thẻ (đã trả lời thẳng): để dành cho lần sau."""
+        for c in contexts:
+            if c["code"] != keep and c["code"] not in shown_before and c["code"] in s["contexts_shown"]:
+                s["contexts_shown"].remove(c["code"])
 
     def assessment(self, s: dict) -> dict:
         a = s["answers"]
@@ -481,7 +522,8 @@ class Engine:
             if h["asks_context"]:
                 sig["asks_context"] = list(dict.fromkeys(sig["asks_context"] + h["asks_context"]))
                 sig["asks_unknown"] = False
-        elif not sig["answers_current"] and not sig["asks_unknown"] and self._on_topic(qn, text):
+        elif (not sig["answers_current"] and not sig["asks_unknown"] and not sig["asks_context"]
+              and self._on_topic(qn, text)):
             # câu ví von / cảm thán về đúng chi tiết đang hỏi (vd "đôi mắt như biển hồ"): vẫn là trả lời
             sig["answers_current"] = True
 
@@ -548,8 +590,10 @@ class Engine:
             sig["depth"] = 0
         sig["bridge"] = str(data.get("bridge", "")).strip()
         fb = str(data.get("feedback", "")).strip()
+        fb = fb[:1].upper() + fb[1:]               # AI hay viết thường chữ đầu ("đôi mắt của cô ấy...")
         sig["feedback"] = fb if fb and "?" not in fb and len(fb) <= 320 and not FORBIDDEN.search(fb) \
-            and not re.search(r"insight|ghi chú|đúng là|bạn nói đúng|chính xác", fb, re.I) else ""
+            and not re.search(r"insight|ghi chú|đúng là|bạn nói đúng|chính xác|lời mô tả|mô tả rằng|đúng như",
+                              fb, re.I) else ""
         return sig
 
     def _derive_ctx_keywords(self) -> dict:
@@ -665,12 +709,18 @@ class Engine:
         if re.search(r"(?:^|\s)(à|hả|nhỉ|ha|ghê|quá|nha|đó|đấy|ta)$", t.lower()):   # câu cảm thán / đùa: nhắc lại nghe gượng
             return ""
         first = bool(FIRST_PERSON.match(t))
-        if not first and QUESTION_RE.search(text.lower()):   # câu hỏi ngược, không phải nhận xét
+        if QUESTION_RE.search(text.lower()):       # câu hỏi (kể cả "Tôi thắc mắc là..."): nhắc lại nghe như nhại
             return ""
-        t = FIRST_PERSON.sub("bạn", t)
         if first:                                  # "Tôi nghĩ ..." -> "Bạn nghĩ ..."
+            t = FIRST_PERSON.sub("bạn", t)
             return t[0].upper() + t[1:] + "."
-        return f"Bạn nhận ra rằng {t[0].lower() + t[1:]}."
+        # cụm ngắn kiểu "Bí ẩn, làm tôi thắc mắc": vế sau nói về chính người dùng -> chỉ nhắc vế đầu
+        # ("Bạn thấy bí ẩn."), tránh câu sai ngữ pháp "Bạn nhận ra rằng bí ẩn, làm bạn thắc mắc."
+        head, _, tail = t.partition(",")
+        if tail and FIRST_PERSON.search(tail):
+            t = head.strip()
+        t = re.sub(r"^(cảm thấy|thấy)\s+", "", FIRST_PERSON.sub("bạn", t), flags=re.I)
+        return f"Bạn thấy {t[0].lower() + t[1:]}." if t else ""
 
     def _feedback(self, node, qn, opt, text, sig) -> str:
         """Lời phản hồi ĐÚNG với câu trả lời vừa rồi (hiện trước câu hỏi kế tiếp).
