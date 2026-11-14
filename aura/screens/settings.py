@@ -24,9 +24,11 @@ ABOUT = [
      "hoặc tả một bức tranh để AURA đoán tên và dẫn bạn tới đúng bức trong Kho tranh. Câu trả lời do AI soạn "
      "nên có thể chưa hoàn hảo; thông tin ngoài tư liệu của ứng dụng luôn được ghi rõ là kiến thức chung."),
     ("Scan tác phẩm",
-     "Chụp một bức tranh (cả bức hay chỉ một phần), AURA so các điểm đặc trưng trong ảnh với tranh trong Kho "
-     "tranh để nhận ra bức đó, kể cả khi ảnh chụp nghiêng, thiếu góc hay hơi mờ. Khi chưa chắc, AURA hỏi lại "
-     "thay vì đoán bừa. Scan không dùng AI bên ngoài: việc nhận diện chạy ngay trên máy chủ của AURA."),
+     "Bấm nút Scan ở giữa thanh điều hướng, khung quét mở ngay: hướng camera vào bức tranh (cả bức hay chỉ "
+     "một phần) rồi bấm chụp, hoặc chọn ảnh có sẵn trong Thư viện. AURA so các điểm đặc trưng trong ảnh với "
+     "tranh trong Kho tranh để nhận ra bức đó, kể cả khi ảnh nghiêng, thiếu góc hay hơi mờ. Khi chưa chắc, "
+     "AURA hỏi lại thay vì đoán bừa. Scan không dùng AI bên ngoài: việc nhận diện chạy ngay trên máy chủ "
+     "của AURA."),
     ("Nguồn & giấy phép",
      "Thông tin tác phẩm: Bảo tàng Louvre (Paris) và National Gallery (London). Ảnh tranh và ảnh minh hoạ: "
      "Wikimedia Commons, thuộc phạm vi công cộng. Icon: Lucide (giấy phép ISC). Phông chữ: Inter, Lora, "
@@ -50,10 +52,10 @@ PRIVACY = [
      "trả lời. Máy chủ của AURA không ghi lại nội dung bạn gõ vào nhật ký. Vì vậy, đừng gõ thông tin cá nhân "
      "nhạy cảm vào ô trò chuyện."),
     ("Ảnh chụp ở Scan",
-     "Khi bạn dùng Scan, ảnh được gửi lên máy chủ của AURA để nhận diện bức tranh. Ảnh chỉ nằm tạm trên máy "
-     "chủ trong lúc nhận diện rồi bị xoá ngay; AURA không lưu lại ảnh và không gửi ảnh cho dịch vụ AI hay bên "
-     "thứ ba nào. Một bản thu nhỏ của ảnh được giữ trong phiên đang mở để hiện lại kết quả cho bạn, và mất đi "
-     "khi bạn đóng trang."),
+     "Camera chỉ bật khi khung quét đang mở và tắt ngay khi bạn chụp xong hoặc đóng khung. Ảnh vừa chụp (hay "
+     "chọn) được thu nhỏ ngay trên máy bạn rồi gửi lên máy chủ của AURA để nhận diện bức tranh. Ảnh chỉ nằm "
+     "tạm trên máy chủ trong lúc nhận diện rồi bị xoá ngay; AURA không lưu lại ảnh, không hiện lại ảnh, và "
+     "không gửi ảnh cho dịch vụ AI hay bên thứ ba nào."),
     ("Xoá dữ liệu",
      "Nút Bắt đầu lại trong mỗi cuộc trò chuyện xoá cuộc trò chuyện đó. Đăng xuất xoá hồ sơ, tranh đã lưu và "
      "mọi cuộc trò chuyện trên thiết bị này. Bạn cũng có thể xoá dữ liệu trang web trong cài đặt trình duyệt."),

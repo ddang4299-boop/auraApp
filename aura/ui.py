@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import weakref
 from contextvars import ContextVar
 from typing import Callable, Optional, Sequence
 
@@ -76,14 +77,17 @@ def kicker(text: str, size: float = 10, ls: float = 1.2, color: str = PRIMARY) -
     return T(text.upper(), size, 600, color, ls=ls)
 
 
+SPACE = "space"     # dấu (data) của khoảng trống do V()/H() tạo: compact() nhận ra và gộp đi
+
+
 def V(h: float) -> ft.Container:
-    """Khoảng trống dọc."""
-    return ft.Container(height=h)
+    """Khoảng trống dọc (compact() gộp nó vào lề của dòng chữ / ảnh kế bên khi dựng màn)."""
+    return ft.Container(height=h, data=SPACE)
 
 
 def H(w: float) -> ft.Container:
-    """Khoảng trống ngang."""
-    return ft.Container(width=w)
+    """Khoảng trống ngang (compact() gộp nó vào lề của dòng chữ / ảnh kế bên khi dựng màn)."""
+    return ft.Container(width=w, data=SPACE)
 
 
 def icon(name: str, size: float = 22, color: str = INK) -> ft.Image:
@@ -262,6 +266,7 @@ def top_bar(title: str, *, on_back: Handler = None, leading: str = "arrow-left",
 # Các mục trên thanh điều hướng (tham số `active` của nav_bar). Nút Scan ở giữa không phải một mục.
 NAV_HOME, NAV_GALLERY, NAV_ASK, NAV_SETTINGS = range(4)
 NAV_SCAN = 10                 # màn Scan: không mục nào sáng, nút Scan có vòng sáng
+HINT_EDGE = "#E2CDB4"         # viền bong bóng "Quét tranh ngay"
 # Màn của một bức tranh (tổng quan, chi tiết, trò chuyện, tư liệu, quiz...) thuộc mục Kho tranh
 NAV_PAINTING = NAV_GALLERY
 
@@ -296,18 +301,53 @@ def nav_bar(app, active: int) -> ft.Container:
             padding=ft.Padding.symmetric(horizontal=pad), alignment=ft.Alignment.CENTER,
             bgcolor=NAV_ACTIVE_BG if on else None, ink=True,      # gợn sóng ngay khi chạm, kể cả mạng chậm
             on_click=lambda e, r=route: app.go(r)))
-    # Nút Scan tròn ở giữa thanh: mở màn chụp ảnh nhận diện tranh (đang mở thì có vòng sáng quanh nút)
-    items.insert(2, ft.Container(icon("scan-camera", 21, WHITE), width=44, height=44, border_radius=22,
-                                 bgcolor=PRIMARY, alignment=ft.Alignment.CENTER, tooltip="Scan ảnh tác phẩm",
-                                 border=ft.Border.all(3, NAV_ACTIVE_BG) if active == NAV_SCAN else None,
-                                 ink=True, on_click=lambda e: app.go("/scan")))
-    return ft.Container(
+    # Nút Scan tròn ở giữa thanh: bấm là khung quét (camera trực tiếp) hiện NGAY, do trình duyệt mở trong
+    # cú chạm (`action`), không phải chờ máy chủ. on_click chỉ báo máy chủ tắt bong bóng gợi ý và nạp sẵn
+    # bộ nhận diện. Đang ở màn Scan thì nút có vòng sáng.
+    scan_btn = ft.Container(icon("scan-camera", 21, WHITE), width=44, height=44, border_radius=22,
+                            bgcolor=PRIMARY, alignment=ft.Alignment.CENTER, tooltip="Quét tranh",
+                            border=ft.Border.all(3, NAV_ACTIVE_BG) if active == NAV_SCAN else None,
+                            ink=True, on_click=app.scan_tapped)
+    scan_btn.action = app.pick_action()
+    items.insert(2, scan_btn)
+    bar = ft.Container(
         ft.Row(items, spacing=0 if narrow else 2, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         height=NAV_PILL_H, padding=ft.Padding.symmetric(horizontal=10 if narrow else 4, vertical=4),
         bgcolor=NAV_BG, border_radius=NAV_PILL_H / 2,
         border=ft.Border.all(1, BORDER),
         shadow=[ft.BoxShadow(blur_radius=16, spread_radius=-4, offset=ft.Offset(0, 6),
                              color=f"{SHADOW_INK},0.16")])
+    # Bong bóng "Quét tranh ngay": chỉ trên điện thoại (thanh nổi), không ở màn Scan / Hỏi Aura (có ô chat).
+    # screen() đặt nó ngay trên nút Scan khi thanh nổi ở cạnh dưới.
+    if app.scan_hint is not False and not FRAME_W.get() and active not in (NAV_SCAN, NAV_ASK):
+        bar.data = {"hint": scan_hint(app)}
+    return bar
+
+
+def scan_hint(app) -> ft.Container:
+    """Bong bóng mây nhỏ chỉ xuống nút Scan, gợi ý người mới. Bấm vào là tắt hẳn (nhớ trong trình duyệt).
+    Dựng sẵn nhưng ẩn khi app chưa đọc xong bộ nhớ trình duyệt, đọc xong mới hiện dần (app._reveal_hints)."""
+    edge = ft.Border.all(1, HINT_EDGE)       # viền ấm mảnh: nổi rõ cả khi nằm trên thẻ trắng
+
+    def puff(d: float) -> ft.Container:
+        return ft.Container(width=d, height=d, border_radius=d / 2, bgcolor=WHITE, border=edge,
+                            shadow=[ft.BoxShadow(blur_radius=4, offset=ft.Offset(0, 1), color=f"{SHADOW_INK},0.14")])
+
+    pill = ft.Container(
+        ft.Row([icon("sparkles", 13, PRIMARY), H(6), T("Quét tranh ngay", 12, 600, PRIMARY, lh=1.0, no_wrap=True)],
+               spacing=0, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        padding=ft.Padding.only(left=11, right=13, top=8, bottom=8), bgcolor=WHITE, border_radius=16, border=edge,
+        shadow=[ft.BoxShadow(blur_radius=14, spread_radius=-3, offset=ft.Offset(0, 4), color=f"{SHADOW_INK},0.2")])
+    # hai chấm nhỏ dẫn xuống nút Scan: dáng bong bóng "đám mây" như lời nghĩ trong truyện tranh
+    tail = ft.Column([V(3), puff(8), V(2), puff(5)], spacing=0, tight=True,
+                     horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+    bubble = ft.Container(
+        ft.Column([pill, tail], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        on_click=app.dismiss_scan_hint, tooltip="Bấm để ẩn gợi ý", visible=app.scan_hint is True,
+        animate_opacity=ft.Animation(320, ft.AnimationCurve.EASE_OUT),
+        animate_offset=ft.Animation(320, ft.AnimationCurve.EASE_OUT))
+    app.keep_hint(bubble)
+    return bubble
 
 
 def _status_bar() -> ft.Container:
@@ -341,10 +381,121 @@ def pad(control: ft.Control, h: float = GUTTER) -> ft.Container:
     return ft.Container(control, padding=ft.Padding.symmetric(horizontal=h))
 
 
+# ---- Nén cây giao diện (giảm RAM máy chủ) ----------------------------------------
+# Máy chủ giữ cây control của mọi màn đang mở của mọi người dùng. Với mỗi control, Flet còn cất thêm bản chụp
+# trạng thái để so khác biệt lần sau, nên một khoảng trống V()/H() tốn ~4,5 KB RAM, gấp đôi một dòng chữ.
+# Trước đây ~1/4 số control của một màn chỉ là khoảng trống. compact() chạy MỘT lần khi dựng màn:
+#   1. gộp các khoảng trống liền nhau thành một;
+#   2. cộng khoảng trống vào lề (margin) của dòng chữ / ảnh ngay sau nó (hoặc ngay trước nếu nó đứng cuối),
+#      rồi bỏ hẳn control khoảng trống. Lề cũng chính là khoảng trống ở phía trình duyệt: bố cục y hệt
+#      (đã so từng pixel ảnh chụp các màn trước/sau).
+# Chỉ gộp vào Text, Image, Row, Stack: app không bao giờ ẩn/hiện các loại này. Control có thể bị ẩn (Container,
+# Column: ô "đang nghĩ", phần đầu Kho tranh...) thì không nhận, để khi nó ẩn đi khoảng trống bên cạnh vẫn còn
+# như cũ. (Sau này nếu cần ẩn/hiện một Row hay Stack, hãy bọc nó trong một Container rồi ẩn Container đó.)
+# Chỉ áp cho Column/Row có spacing=0 và xếp từ đầu/giữa/cuối (không áp cho SPACE_BETWEEN...): ở đó khoảng
+# trống là một phần tử thật của phép chia đều.
+_FOLD_INTO = (ft.Text, ft.Image, ft.Row, ft.Stack)
+_FOLDABLE_ALIGN = (None, ft.MainAxisAlignment.START, ft.MainAxisAlignment.CENTER, ft.MainAxisAlignment.END)
+_SIDED: "weakref.WeakSet[ft.Control]" = weakref.WeakSet()     # đã được body() cộng lề hai bên
+
+
+def _margin4(m) -> list[float]:
+    if m is None:
+        return [0, 0, 0, 0]
+    if isinstance(m, (int, float)):
+        return [m, m, m, m]
+    return [m.left or 0, m.top or 0, m.right or 0, m.bottom or 0]
+
+
+def _add_margin(c: ft.Control, left: float = 0, top: float = 0, right: float = 0, bottom: float = 0) -> None:
+    l, t, r, b = _margin4(c.margin)
+    c.margin = ft.Margin(left=l + left, top=t + top, right=r + right, bottom=b + bottom)
+
+
+def _side_margin(c: ft.Control, h: float) -> ft.Control:
+    """Lề hai bên cho một mục của body() (thay cho Container bọc ngoài có padding)."""
+    if c not in _SIDED:
+        _add_margin(c, left=h, right=h)
+        _SIDED.add(c)
+    return c
+
+
+def _is_space(c, vertical: bool) -> bool:
+    return (getattr(c, "data", None) == SPACE and isinstance(c, ft.Container) and c.content is None
+            and c.visible is not False and (c.width is None if vertical else c.height is None))
+
+
+def _takes_margin(c) -> bool:
+    # Row cuộn ngang được Flet bọc trong khung cuộn: thêm lề vào đó làm lệch chữ ~1px -> không gộp vào
+    return (isinstance(c, _FOLD_INTO) and c.visible is not False and c.animate_margin is None
+            and getattr(c, "scroll", None) is None
+            and c.left is None and c.top is None and c.right is None and c.bottom is None)
+
+
+def _fold(items: list, vertical: bool) -> int:
+    """Bỏ các khoảng trống trong một Column (vertical) / Row. Trả về số control đã bỏ."""
+    merged: list = []
+    removed = 0
+    for c in items:
+        if _is_space(c, vertical) and merged and _is_space(merged[-1], vertical):
+            prev = merged[-1]                                   # hai khoảng trống liền nhau -> một
+            if vertical:
+                prev.height = (prev.height or 0) + (c.height or 0)
+            else:
+                prev.width = (prev.width or 0) + (c.width or 0)
+            removed += 1
+            continue
+        merged.append(c)
+    out: list = []
+    for i, c in enumerate(merged):
+        if _is_space(c, vertical):
+            size = (c.height if vertical else c.width) or 0
+            nxt = merged[i + 1] if i + 1 < len(merged) else None
+            prv = out[-1] if out else None
+            if size == 0:
+                removed += 1
+                continue
+            if nxt is not None and _takes_margin(nxt):
+                _add_margin(nxt, **({"top": size} if vertical else {"left": size}))
+                removed += 1
+                continue
+            if prv is not None and _takes_margin(prv) and (nxt is None or not _is_space(nxt, vertical)):
+                _add_margin(prv, **({"bottom": size} if vertical else {"right": size}))
+                removed += 1
+                continue
+        out.append(c)
+    if removed:
+        items[:] = out                                          # sửa tại chỗ: ai giữ danh sách vẫn đúng
+    return removed
+
+
+def compact(root: ft.Control) -> int:
+    """Nén cây control của một màn vừa dựng (xem chú thích ở trên). Trả về số control đã bỏ."""
+    removed, todo, seen = 0, [root], set()
+    while todo:
+        c = todo.pop()
+        if id(c) in seen:
+            continue
+        seen.add(id(c))
+        kids = getattr(c, "controls", None)
+        if isinstance(kids, list):
+            if (isinstance(c, (ft.Column, ft.Row)) and not c.spacing and c.alignment in _FOLDABLE_ALIGN
+                    and not getattr(c, "wrap", False)):
+                removed += _fold(kids, isinstance(c, ft.Column))
+            todo.extend(k for k in kids if isinstance(k, ft.Control))
+        content = getattr(c, "content", None)
+        if isinstance(content, ft.Control):
+            todo.append(content)
+    return removed
+
+
 def body(controls: Sequence[ft.Control], *, scroll: bool = True, bottom: float = 0,
          auto_scroll: bool = False, ref: ft.Ref | None = None) -> ft.Column:
-    """Phần nội dung cuộn. Control có data='bleed' được tràn hết chiều ngang."""
-    wrapped = [c if getattr(c, "data", None) == "bleed" else pad(c) for c in controls]
+    """Phần nội dung cuộn. Control có data='bleed' được tràn hết chiều ngang.
+
+    Lề hai bên được đặt thẳng vào `margin` của từng control thay vì bọc mỗi control trong một Container có
+    padding: bố cục y hệt (margin cũng chính là padding ở phía trình duyệt) nhưng bớt một control mỗi mục."""
+    wrapped = [c if getattr(c, "data", None) in ("bleed", SPACE) else _side_margin(c, GUTTER) for c in controls]
     if bottom:
         wrapped.append(V(bottom))
     return ft.Column(wrapped, spacing=0, expand=True, ref=ref,
@@ -419,7 +570,10 @@ def screen(route: str, content: ft.Control, *, top: ft.Control | None = None,
         layout = col
     if floating:
         # Thanh nổi đè lên nội dung; phần trống hai bên thanh vẫn chạm xuyên xuống nội dung bên dưới.
-        dock = ft.Container(ft.Row([nav], alignment=ft.MainAxisAlignment.CENTER),
+        hint = nav.data.get("hint") if isinstance(nav.data, dict) else None
+        bar: ft.Control = nav if hint is None else ft.Column(
+            [hint, V(4), nav], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+        dock = ft.Container(ft.Row([bar], alignment=ft.MainAxisAlignment.CENTER),
                             left=0, right=0, bottom=NAV_GAP)
         layout = ft.Stack([layout, dock], expand=True, fit=ft.StackFit.EXPAND)
     root: ft.Control = layout if MOCK_DEVICE else ft.SafeArea(layout, expand=True)

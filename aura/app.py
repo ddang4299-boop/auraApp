@@ -19,7 +19,7 @@ from .data import DEFAULT_ID, PAINTINGS
 from .socratic import (Message, ScriptedSocraticEngine, SocraticEngine, message_from_dict,
                        message_to_dict)
 from .theme import BG, FONTS, GUTTER, INK, MAX_W, MUTED, PRIMARY
-from .ui import FRAME_W, T, snack
+from .ui import FRAME_W, T, compact, snack
 
 PREFS_KEY = "aura.profile"
 # Cuộc trò chuyện được cất trong bộ nhớ của trình duyệt (localStorage, qua SharedPreferences):
@@ -28,11 +28,13 @@ CHATS_KEY = "aura.chats"
 CHATS_VERSION = 1
 ASK_KEY = "aura.ask"                   # cuộc hỏi đáp ở tab "Hỏi Aura"
 SAVED_KEY = "aura.saved"               # tranh đã lưu (dấu trang)
+SCAN_HINT_KEY = "aura.scan_hint"       # "off" = đã tắt bong bóng "Quét tranh ngay" trên nút Scan
 ASK_KEEP = 60                          # chỉ cất ngần này tin gần nhất của "Hỏi Aura"
 APP_VERSION = "1.2.0"
 
-# Các tab trên thanh điều hướng: mở tab thì giữ sẵn Trang chủ ở đáy stack (xem _show)
-ROOT_ROUTES = {"/", "/home", "/gallery", "/saved", "/scan", "/ask", "/settings"}
+# Các tab trên thanh điều hướng: mở tab thì giữ sẵn Trang chủ ở đáy stack (xem _show).
+# /scan không phải tab: màn kết quả quét chồng lên màn đang xem, quay lại là về đúng chỗ cũ.
+ROOT_ROUTES = {"/", "/home", "/gallery", "/saved", "/ask", "/settings"}
 SCAN_MAX_BYTES = 25 * 1024 * 1024      # ảnh lớn hơn thì từ chối (ảnh điện thoại thường 2-12 MB)
 UPLOAD_WAIT = 120                      # chờ tải ảnh lên tối đa ngần này giây
 # Bản web lúc mới mở hay báo bề rộng tạm (vd 164px). Điện thoại thật rộng ít nhất ~320px,
@@ -70,11 +72,16 @@ class AskState:
 
 @dataclass
 class ScanState:
-    """Màn Scan (chỉ giữ trong phiên đang mở, không cất vào trình duyệt)."""
-    phase: str = "intro"               # intro | working | result
+    """Màn Scan (chỉ giữ trong phiên đang mở, không cất vào trình duyệt). Xem screens/scan.py."""
+    phase: str = "ready"               # ready | working | result
     result: object | None = None       # vision.ScanResult của lần quét gần nhất
     error: str | None = None           # too_big | upload | bad_image | unavailable
     declined: bool = False             # người dùng bấm "Không phải" ở câu "Có phải bức này không?"
+    job: int = 0                       # tăng mỗi lần quét mới / huỷ: kết quả của lượt cũ bị bỏ qua
+    step: int = 0                      # 0 đang gửi ảnh, 1 đang nhận diện
+    started: float = 0.0               # lúc bắt đầu lượt quét (time.monotonic)
+    step_at: float = 0.0               # lúc chuyển sang bước nhận diện
+    screen: object | None = None       # màn /scan đang dựng (để cập nhật tại chỗ)
 
 
 @dataclass
@@ -158,10 +165,14 @@ class AuraApp:
         # Dịch vụ của Flet: lưu trữ cục bộ và mở trình duyệt/URL.
         self.prefs = ft.SharedPreferences()
         self.launcher = ft.UrlLauncher()
-        # Hộp chọn ảnh cho Scan (trên điện thoại có mục "Chụp ảnh"); xem pick_action / receive_photo.
+        # Hộp chọn ảnh cho Scan; bản web hiện khung quét trực tiếp (assets/aura-scan.js).
+        # Xem pick_action / receive_photo và screens/scan.py.
         self.picker = ft.FilePicker(on_upload=self._on_upload, on_result=self._on_pick_result)
         self._uploads: dict[str, asyncio.Future] = {}
-        self.on_photo = None               # màn Scan gắn hàm nhận ảnh vừa chọn vào đây
+        # Bong bóng "Quét tranh ngay" trên nút Scan: None = chưa đọc xong bộ nhớ trình duyệt (dựng sẵn
+        # nhưng ẩn), True = hiện, False = người dùng đã tắt. _hints: các bong bóng đang nằm trên màn.
+        self.scan_hint: bool | None = None
+        self._hints: list[ft.Control] = []
         # Điều hướng nhanh (xem go / _on_route_change):
         #   _epoch  tăng khi dữ liệu dùng chung đổi (hồ sơ, tranh đã lưu) -> màn cũ trong stack dựng lại
         #   _url    đường dẫn trình duyệt đang hiện (mình đã đẩy hoặc trình duyệt báo về)
@@ -262,9 +273,11 @@ class AuraApp:
         """Dựng màn với bề rộng cột đúng khổ màn hình (ui.screen đọc FRAME_W)."""
         token = FRAME_W.set(self.width if self.page_width > MAX_W else None)
         try:
-            return builder(self, query, *args)
+            view = builder(self, query, *args)
         finally:
             FRAME_W.reset(token)
+        compact(view)                  # bỏ các control khoảng trống trước khi gửi đi (giảm RAM, xem ui.compact)
+        return view
 
     def rebuild(self) -> None:
         """Dựng lại màn hình hiện tại (sau khi đổi trạng thái lớn)."""
@@ -477,17 +490,75 @@ class AuraApp:
                                            and m.get("role") in ("user", "aura") and isinstance(m.get("text"), str)]
         except Exception as e:
             print(f"[app] Bỏ cuộc hỏi đáp đã lưu: {e}")
+        try:
+            raw = await self.prefs.get(SCAN_HINT_KEY)
+        except Exception:
+            raw = None
+        if self.scan_hint is None:
+            self.scan_hint = raw != "off"
+            if self.scan_hint:
+                await self._reveal_hints()
 
     def save_ask(self) -> None:
         msgs = self.state.ask.messages[-ASK_KEEP:]
         self.page.run_task(self._write_pref, ASK_KEY, json.dumps({"v": 1, "messages": msgs}, ensure_ascii=False))
 
+    # ---- Scan: bong bóng gợi ý "Quét tranh ngay" ---------------------------------
+    def keep_hint(self, bubble: ft.Control) -> None:
+        """nav_bar báo có một bong bóng mới trên màn (chỉ giữ vài cái gần nhất: màn cũ đã bị thay)."""
+        self._hints = self._hints[-5:] + [bubble]
+
+    async def _reveal_hints(self) -> None:
+        """Vừa biết là cần hiện bong bóng: hiện dần các bong bóng đã dựng sẵn (đang ẩn) trên màn."""
+        hints = [b for b in self._hints if not b.visible]
+        for b in hints:
+            b.visible, b.opacity, b.offset = True, 0, ft.Offset(0, 0.25)
+        self._update_all(hints)
+        await asyncio.sleep(0.08)
+        for b in hints:
+            b.opacity, b.offset = 1, ft.Offset(0, 0)
+        self._update_all(hints)
+
+    def scan_tapped(self, e=None) -> None:
+        """Nút Scan vừa được bấm (khung quét đã tự mở trên trình duyệt nhờ `action`): tắt bong bóng gợi ý và
+        nạp sẵn bộ nhận diện trong lúc người dùng ngắm."""
+        self.dismiss_scan_hint()
+        from .screens import scan
+        self.page.run_task(scan.warm)
+
+    def dismiss_scan_hint(self, e=None) -> None:
+        """Bấm vào bong bóng (hoặc dùng Scan lần đầu): tắt hẳn, lần sau không hiện nữa."""
+        if self.scan_hint is False:
+            return
+        self.scan_hint = False
+        self.page.run_task(self._write_pref, SCAN_HINT_KEY, "off")
+        hints, self._hints = self._hints, []
+        for b in hints:
+            b.opacity, b.offset = 0, ft.Offset(0, 0.2)
+        self._update_all(hints)
+
+        async def _gone():
+            await asyncio.sleep(0.3)
+            for b in hints:
+                b.visible = False
+            self._update_all(hints)
+        self.page.run_task(_gone)
+
+    @staticmethod
+    def _update_all(controls: list[ft.Control]) -> None:
+        for c in controls:
+            try:
+                c.update()
+            except Exception:            # màn chứa bong bóng đã bị thay
+                pass
+
     # ---- Scan: lấy ảnh người dùng chụp / chọn --------------------------------
     def pick_action(self) -> ft.PickFiles:
-        """Gắn vào nút chụp (thuộc tính `action`): TRÌNH DUYỆT mở hộp chọn ảnh ngay trong cú chạm, không
-        đợi hỏi máy chủ Python. Safari trên iPhone chỉ cho mở hộp chọn tệp trong lúc đang xử lý cú chạm,
-        nên cách cũ (gọi pick_files từ Python, phải đi một vòng qua máy chủ) bị Safari lặng lẽ chặn.
-        Trên điện thoại, hộp chọn có mục "Chụp ảnh" (mở camera). Ảnh chọn xong về _on_pick_result."""
+        """Gắn vào nút Scan / nút chụp (thuộc tính `action`): TRÌNH DUYỆT mở hộp chọn ảnh ngay trong cú chạm,
+        không đợi hỏi máy chủ Python. Safari trên iPhone chỉ cho mở hộp chọn tệp trong lúc đang xử lý cú chạm,
+        nên cách gọi pick_files từ Python (phải đi một vòng qua máy chủ) bị Safari lặng lẽ chặn.
+        Bản web: assets/aura-scan.js đón lệnh này và hiện khung quét có camera trực tiếp + nút Thư viện ảnh.
+        App trên máy: hộp chọn ảnh của hệ điều hành. Ảnh chọn xong (hoặc huỷ) về _on_pick_result."""
         # bản web chạy không có thư mục nhận ảnh (vd `flet run --web`): đọc ảnh thẳng qua kết nối
         with_data = bool(self.page.web and not os.environ.get("AURA_UPLOAD_DIR"))
         # cancel_upload_on_window_blur=False: mở camera làm trang web mất tiêu điểm; để mặc định (True)
@@ -496,9 +567,8 @@ class AuraApp:
                             with_data=with_data, cancel_upload_on_window_blur=False)
 
     async def _on_pick_result(self, e) -> None:
-        handler = self.on_photo
-        if handler is not None:
-            await handler(e.files[0] if e.files else None)
+        from .screens import scan
+        await scan.on_photo(self, e.files[0] if e.files else None)
 
     async def receive_photo(self, f) -> bytes:
         """Lấy nội dung ảnh vừa chọn.
@@ -523,7 +593,8 @@ class AuraApp:
             await asyncio.wait_for(fut, UPLOAD_WAIT)
             return await asyncio.to_thread(dest.read_bytes)
         finally:
-            self._uploads.pop(f.name, None)
+            if self._uploads.get(f.name) is fut:       # chỉ gỡ lượt chờ của chính mình
+                del self._uploads[f.name]
             dest.unlink(missing_ok=True)
 
     async def _on_upload(self, e) -> None:

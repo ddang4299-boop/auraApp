@@ -53,7 +53,7 @@ aura/
     viewer.py           Xem tranh phóng to
     chat.py             Trò chuyện về tranh (Socrates quanh một bức, câu hỏi nhanh, bắt đầu lại)
     ask.py              Hỏi Aura: hỏi đáp mở về Phục Hưng, tả tranh để AURA đoán tên và mở đúng bức
-    scan.py             Scan tác phẩm: mẹo chụp, chụp/chọn ảnh, kết quả nhận diện
+    scan.py             Scan tác phẩm: nhận ảnh, màn chờ, kết quả nhận diện (chỉ hiện tranh tìm được)
     sources.py          Tư liệu: các thẻ tư liệu chatbot dựa vào khi trả lời
     settings.py         Cài đặt, Giới thiệu, Chính sách quyền riêng tư
     detail.py           Chi tiết tranh (phóng to)
@@ -73,6 +73,7 @@ Chatbot/                Chatbot Socrates chạy theo kịch bản JSON
   build_hints.py        Sinh sẵn gợi ý cho từng câu hỏi trong kịch bản
   scripts/              Kịch bản: mỗi tranh một file <Tên_tranh>.json
 assets/                 Font, icon (Lucide), ảnh tranh, trang khung bản web (index.html)
+  aura-scan.js          Khung quét tranh trực tiếp của bản web (camera + khung ngắm + Thư viện ảnh)
   fonts/web/            Font rút gọn (Latin + tiếng Việt) app thực sự dùng; font gốc ở fonts/
   images/home/thumb/    Ảnh minh hoạ thu nhỏ cho các thẻ nhỏ; ảnh gốc ở images/home/
 tools/
@@ -96,7 +97,7 @@ requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server
 | `/painting/<id>` | Tổng quan tranh |
 | `/chat/<id>` | Trò chuyện về một bức tranh (Socrates) |
 | `/ask` | Hỏi Aura: hỏi đáp mở, nhận diện tranh từ mô tả |
-| `/scan` | Scan tác phẩm: chụp ảnh để nhận ra bức tranh |
+| `/scan` | Scan tác phẩm: màn chờ và kết quả nhận diện (mở thẳng thì có nút Mở khung quét) |
 | `/sources/<id>` | Tư liệu chatbot dùng để trả lời |
 | `/detail/<id>/<chi-tiết>` | Chi tiết tranh |
 | `/quiz/<id>`, `/result/<id>` | Quiz & cảm nhận, Kết quả |
@@ -105,11 +106,14 @@ requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server
 
 Thanh điều hướng nổi (dạng viên thuốc): **Khám phá** · **Kho tranh** · **Scan** · **Hỏi Aura** · **Cài đặt**.
 - Kho tranh gồm Bộ sưu tập và Đã lưu (tranh đã bấm dấu trang, lưu trong trình duyệt).
-- Nút tròn ở giữa là **Scan ảnh tác phẩm**: chụp cả bức hay chỉ một phần, AURA nhận ra bức tranh và mở đúng
-  trang (chụp sát một chi tiết thì gợi ý mở chi tiết đó). Chưa chắc thì hỏi "Có phải bức này không?",
-  không nhận ra thì gợi ý chụp lại. Cách làm: `aura/vision.py` "nhớ" sẵn khoảng 1.500 điểm đặc trưng của mỗi
-  bức (SIFT, ở 3 mức nét), ghép với điểm trong ảnh chụp rồi kiểm tra hình học bằng RANSAC. Không cần huấn
-  luyện model, thêm tranh vào `data.py` là Scan nhận được. Ảnh gửi lên máy chủ, nhận diện xong xoá ngay.
+- Nút tròn ở giữa là **Scan ảnh tác phẩm**, gọn như quét mã QR ở app ngân hàng: bấm là khung quét hiện
+  ngay (camera chạy trực tiếp, khung ngắm, nút chụp, nút **Thư viện** để chọn ảnh có sẵn). Chụp cả bức hay
+  chỉ một phần; trong lúc chờ có các bước đang làm, vệt sáng lướt qua Kho tranh và thẻ "Bạn có biết?".
+  Kết quả chỉ hiện bức tranh tìm được (chụp sát một chi tiết thì gợi ý mở chi tiết đó). Chưa chắc thì hỏi
+  "Có phải bức này không?", không nhận ra thì gợi ý quét lại. Người mới thấy bong bóng nhỏ "Quét tranh ngay"
+  phía trên nút; bấm vào là tắt hẳn. Cách nhận diện: `aura/vision.py` "nhớ" sẵn khoảng 1.500 điểm đặc trưng
+  của mỗi bức (SIFT, ở 3 mức nét), ghép với điểm trong ảnh chụp rồi kiểm tra hình học bằng RANSAC. Không cần
+  huấn luyện model, thêm tranh vào `data.py` là Scan nhận được. Ảnh gửi lên máy chủ, nhận diện xong xoá ngay.
 - Hỏi Aura: hỏi về thời Phục Hưng hay bất kỳ bức tranh nào; tả một bức tranh thì AURA đoán tên, bức nào có
   trong Kho tranh thì hiện thẻ có nút mở thẳng bức đó.
 - Trang của mỗi bức tranh có nút trò chuyện về bức đó và liên kết tới phần Tư liệu.
@@ -197,11 +201,28 @@ Nếu chưa có khoá, app hiện hộp thoại hướng dẫn kèm nút **Dùng
     nên thường không bao giờ nạp. OpenCV (Scan) chỉ nạp khi có người dùng Scan.
   - Người dùng đóng tab: phiên được xoá sau 15 phút (mặc định của Flet là 1 giờ). Trên Linux, bộ cấp phát
     bộ nhớ được giới hạn 2 arena và trả RAM thừa về hệ điều hành 5 phút một lần (`main.py`).
+  - Nén cây giao diện (`ui.compact`, chạy một lần khi dựng mỗi màn): Flet giữ mọi control của mọi màn đang
+    mở kèm bản chụp trạng thái để so khác biệt, nên một khoảng trống `V()`/`H()` tốn ~4,5 KB. Các khoảng trống
+    liền nhau được gộp làm một, rồi cộng vào lề (`margin`) của dòng chữ / ảnh / hàng kế bên; `body()` đặt lề
+    hai bên bằng `margin` thay vì bọc mỗi mục trong một Container. Đo được: mỗi phiên từ 1.090 còn 809
+    control (-26%), RAM Python mỗi phiên -12%, máy chủ gửi ít hơn ~16% byte và tốn ít hơn ~20% CPU khi dựng
+    màn; giao diện giữ nguyên (so từng pixel 25 màn trước/sau: 0 pixel khác). Lưu ý khi viết màn mới: chỉ
+    Text, Image, Row, Stack nhận khoảng trống, nên muốn ẩn/hiện một Row hay Stack thì bọc nó trong Container
+    rồi ẩn Container đó.
+  - Scan chỉ chạy MỘT lượt nhận diện một lúc (người quét sau xếp hàng): mỗi lượt SIFT dựng tháp ảnh tạm
+    ~80-110 MB, 3 người quét cùng lúc trước đây đẩy RAM lên +309 MB, nay +109 MB. Máy chủ 0,1 CPU nên chạy
+    song song cũng không nhanh hơn. Điểm tranh gốc cất ở 1 byte/số (`uint8`, 2,6 MB còn 0,7 MB), lúc so mới
+    đổi tạm sang `float32` (OpenCV tăng tốc phần cứng cho `float32`, kết quả y hệt). Ảnh rõ thì so xong các bản
+    "nét" là kết luận luôn, khỏi so các bản "mờ" (thử 51 ảnh: kết luận không đổi).
 - Scan: điểm đặc trưng của tranh gốc được tính sẵn trong `aura/scan_refs.npz` (~0,5 MB), máy chủ khỏi phải
   tính lúc chạy. **Thêm hoặc đổi ảnh tranh thì chạy `python -m aura.vision` để tạo lại** (quên cũng không
   sao: app tự nhận ra ảnh đã đổi và tính lại bức đó, chỉ chậm hơn lần đầu).
-- Nút chụp ở Scan dùng `action=ft.PickFiles(...)`: trình duyệt mở hộp chọn ảnh ngay trong cú chạm. Safari
-  trên iPhone chặn hộp chọn tệp nếu lệnh mở phải đi vòng qua máy chủ Python (cách `pick_files()`).
+- Nút Scan dùng `action=ft.PickFiles(...)`: trình duyệt mở hộp chọn ảnh ngay trong cú chạm (Safari trên
+  iPhone chặn hộp chọn tệp nếu lệnh mở phải đi vòng qua máy chủ Python, cách `pick_files()`).
+  `assets/aura-scan.js` (nạp trong `assets/index.html`) "đón" lệnh mở đó và hiện khung quét có camera trực
+  tiếp; chụp xong, ảnh được thu nhỏ ngay trên điện thoại (cạnh dài 1280px, vài trăm KB thay vì 3-12 MB) rồi trao
+  lại cho Flet như thể người dùng vừa chọn tệp, nên phần Python không đổi. Trình duyệt không cho dùng camera
+  (không HTTPS, trình duyệt cũ) thì tự quay về hộp chọn ảnh gốc. Camera chỉ bật khi khung đang mở.
 
 ## Kiểm thử
 

@@ -37,6 +37,11 @@ BLUR_VAR = 30.0              # độ nét (phương sai Laplacian) dưới mức
 DETAIL_MAX_COVER = 0.5       # ảnh chụp phủ dưới 50% bức tranh mới tính là "đang chụp một chi tiết"
 QUERY_SIZES = (LONG_SIDE, 400)
 RANK = {"none": 0, "ask": 1, "sure": 2}
+# Dừng sớm: so xong các bản "nét" của mọi bức mà bức đứng đầu đã có ngần này inliers và bức thứ hai rất thấp
+# thì kết luận luôn, khỏi so tiếp các bản "mờ" (ảnh rõ là trường hợp hay gặp nhất: tiết kiệm ~2/3 phép so).
+# An toàn: ảnh KHÔNG thuộc Kho chưa bao giờ quá 7 inliers, nên bức thứ hai không thể vượt lên đủ để đổi kết luận.
+STOP_INLIERS = 2 * SURE_INLIERS
+STOP_SECOND = ASK_INLIERS - 1
 
 
 @dataclass
@@ -47,8 +52,6 @@ class ScanResult:
     inliers: int = 0
     second: int = 0
     blurry: bool = False
-    thumb: bytes | None = None        # ảnh chụp thu nhỏ (JPEG) để hiện lại cho người dùng
-    thumb_aspect: float = 1.0         # rộng / cao của ảnh thu nhỏ
     ms: int = 0
 
 
@@ -106,8 +109,15 @@ class Recognizer:
         self._paintings = list(paintings)
         self._assets = assets_dir
         self._refs_file = refs_file
-        self._refs = None             # [(pid, pts Nx2 float32, descriptors float32, (h, w))]
+        # [(pid, pts Nx2 float32, descriptors Nx128 uint8, (h, w))], xếp theo mức nét: mọi bức ở mức nét trước,
+        # rồi mới tới các mức mờ (để dừng sớm được, xem _match)
+        self._refs = None
+        self._n_sharp = 0                 # số bản ở mức nét (đứng đầu danh sách)
         self._lock = threading.Lock()
+        # Mỗi lúc chỉ MỘT lượt nhận diện: SIFT dựng tháp ảnh tạm ~80-110 MB mỗi lượt, nhiều người quét cùng lúc
+        # mà chạy song song thì RAM cộng dồn (3 lượt ~300 MB, gần chạm giới hạn 512 MB của máy chủ). Máy chủ chỉ
+        # có 0,1 CPU nên chạy song song cũng không xong sớm hơn: xếp hàng lần lượt là vừa đủ.
+        self._run_lock = threading.Lock()
 
     @property
     def ready(self) -> bool:
@@ -133,8 +143,10 @@ class Recognizer:
                 if got is None or got[0] != _sha1(path):
                     got = (None, self._compute(path))
                     fresh += 1
-                refs += [(p.id, pts, des, shape) for pts, des, shape in got[1]]
-            self._refs = refs
+                refs += [(level, p.id, pts, des, shape) for level, (pts, des, shape) in enumerate(got[1])]
+            refs.sort(key=lambda r: r[0])                 # mọi bức ở mức nét trước, rồi mới tới mức mờ
+            self._n_sharp = sum(1 for r in refs if r[0] == 0)
+            self._refs = [r[1:] for r in refs]
             print(f"[scan] đã nhớ {len(refs)} bản của {len(self._paintings)} bức "
                   f"({fresh} bức tính mới) trong {(time.perf_counter() - t0) * 1000:.0f} ms")
 
@@ -152,7 +164,7 @@ class Recognizer:
             g = cv2.GaussianBlur(img, (0, 0), blur) if blur else img
             kp, des = sift.detectAndCompute(g, None)
             if des is not None and len(kp) >= 8:
-                out.append((np.float32([k.pt for k in kp]), des.astype(np.float32), g.shape[:2]))
+                out.append((np.float32([k.pt for k in kp]), _u8(des), g.shape[:2]))
         return out
 
     def _load_file(self) -> dict:
@@ -173,7 +185,7 @@ class Recognizer:
                         key = f"{pid}__{k}"
                         h, w = (int(x) for x in z[key + "__shape"])
                         levels.append((z[key + "__pts"].astype(np.float32),
-                                       z[key + "__des"].astype(np.float32), (h, w)))
+                                       np.ascontiguousarray(z[key + "__des"], np.uint8), (h, w)))
                     out[str(pid)] = (str(sha), levels)
                 return out
         except Exception as e:
@@ -194,7 +206,7 @@ class Recognizer:
             for k, (pts, des, shape) in enumerate(got):
                 key = f"{p.id}__{k}"
                 arrays[key + "__pts"] = pts.astype(np.float32)
-                arrays[key + "__des"] = np.clip(np.rint(des), 0, 255).astype(np.uint8)
+                arrays[key + "__des"] = _u8(des)
                 arrays[key + "__shape"] = np.array(shape, np.int32)
         arrays.update(pids=np.array(pids), shas=np.array(shas), levels=np.array(levels, np.int32))
         np.savez_compressed(path, **arrays)
@@ -206,24 +218,22 @@ class Recognizer:
             import numpy  # noqa: F401
         except Exception:
             return ScanResult("unavailable")
-        try:
-            return self._recognize(cv2, data, t0)
-        finally:
-            _trim_memory()
+        with self._run_lock:                     # lần lượt từng ảnh (xem __init__)
+            try:
+                return self._recognize(cv2, data, t0)
+            finally:
+                _trim_memory()
 
     def _recognize(self, cv2, data: bytes, t0: float) -> ScanResult:
         self.warm()
         color = _decode(data)
         if color is None:
             return ScanResult("bad_image")
-        th = _shrink(color, 240)
-        ok, buf = cv2.imencode(".jpg", th, [cv2.IMWRITE_JPEG_QUALITY, 75])
-        thumb = buf.tobytes() if ok else None
         gray_full = cv2.cvtColor(color, cv2.COLOR_BGR2GRAY)
         del color
         gray = _shrink(gray_full)
         blurry = cv2.Laplacian(gray, cv2.CV_64F).var() < BLUR_VAR
-        res = ScanResult("none", blurry=blurry, thumb=thumb, thumb_aspect=th.shape[1] / th.shape[0])
+        res = ScanResult("none", blurry=blurry)
         # Lượt 1 ở 800px. Chưa chắc thì dò lại ở ảnh nhỏ hơn: khi chụp sát một chi tiết, chi tiết đó trong
         # ảnh chụp to gấp nhiều lần so với trong ảnh gốc; thu nhỏ ảnh chụp giúp hai bên gần cỡ nhau hơn.
         for size in QUERY_SIZES:
@@ -253,9 +263,15 @@ class Recognizer:
         best: dict[str, tuple[int, object, tuple]] = {}
         if des is not None and len(kp) >= 8:
             qpts = np.float32([k.pt for k in kp])
+            del kp
             matcher = cv2.BFMatcher(cv2.NORM_L2)
-            for pid, rpts, rdes, rshape in self._refs:
-                good = [m[0] for m in matcher.knnMatch(des, rdes, k=2)
+            n_sharp = self._n_sharp
+            for k, (pid, rpts, rdes, rshape) in enumerate(self._refs):
+                if k == n_sharp and _clear_winner(best):  # so xong mức nét của mọi bức: đã chắc thì dừng
+                    break
+                # điểm tranh gốc cất ở uint8 (1 byte/số, RAM bằng 1/4); so khớp trên float32 vì OpenCV tăng
+                # tốc phần cứng cho float32 (nhanh gấp ~3,5 lần uint8). Đổi tạm từng bản (<1 MB), kết quả y hệt.
+                good = [m[0] for m in matcher.knnMatch(des, rdes.astype(np.float32), k=2)
                         if len(m) == 2 and m[0].distance < RATIO * m[1].distance]
                 if len(good) < 8:
                     continue
@@ -296,6 +312,18 @@ class Recognizer:
         hits = [(((d.crop[0] + d.crop[2]) / 2 - cx) ** 2 + ((d.crop[1] + d.crop[3]) / 2 - cy) ** 2, d.key)
                 for d in p.details.values() if d.crop[0] <= cx <= d.crop[2] and d.crop[1] <= cy <= d.crop[3]]
         return min(hits)[1] if hits else None
+
+
+def _clear_winner(best: dict) -> bool:
+    """Bức đứng đầu đã vượt xa ngưỡng chắc chắn và bức thứ hai rất thấp (xem STOP_INLIERS)."""
+    counts = sorted((v[0] for v in best.values()), reverse=True)
+    return bool(counts) and counts[0] >= STOP_INLIERS and (len(counts) < 2 or counts[1] <= STOP_SECOND)
+
+
+def _u8(des):
+    """Descriptor SIFT luôn là số nguyên 0-255 (OpenCV làm tròn sẵn) -> cất 1 byte mỗi số, không mất gì."""
+    import numpy as np
+    return np.ascontiguousarray(np.clip(np.rint(des), 0, 255), np.uint8)
 
 
 def _shrink(img, long_side: int = LONG_SIDE):
@@ -339,6 +367,13 @@ def _sane(H, ref_shape, photo_shape) -> bool:
 
 
 _shared: Recognizer | None = None
+
+
+def preload() -> None:
+    """Nạp sẵn OpenCV và điểm của tranh gốc. Gọi trong luồng phụ ngay khi người dùng mở khung quét: trong
+    mấy giây họ ngắm và bấm chụp, máy chủ đã sẵn sàng, chụp xong là nhận diện luôn."""
+    _cv()
+    recognizer().warm()
 
 
 def recognizer() -> Recognizer:

@@ -17,7 +17,8 @@ import flet as ft
 from ..data import ALL_PAINTINGS, PAINTINGS
 from ..theme import BG, GLASS, GLASS_EDGE, INK, MAX_W, MUTED, PRIMARY, SHADOW_INK, TINT, WHITE, WINE_LIGHT
 from ..topics import ALL as TOPICS
-from ..ui import (H, NAV_ASK, T, V, body, glass, icon, kicker, logo, nav_bar, screen, surface_field, top_bar)
+from ..ui import (H, NAV_ASK, T, V, body, compact, glass, icon, kicker, logo, nav_bar, screen, surface_field,
+                  top_bar)
 from .chat import _appear, _prompt_chip, _user_bubble
 
 STARTERS = [
@@ -150,7 +151,9 @@ def build(app, q) -> ft.View:
         else:
             first = next(j for j, x in enumerate(st.messages) if x["role"] == "aura") == i
             items = [V(16), *_aura_block(app, m, first)]
-        return ft.Column(items, spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        col = ft.Column(items, spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        compact(col)                       # khối tin nhắn thêm sau khi dựng màn: cũng bỏ control khoảng trống
+        return col
 
     def sync(animate: bool) -> list[ft.Container]:
         new = []

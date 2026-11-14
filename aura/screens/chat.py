@@ -13,8 +13,8 @@ from ..data import DEFAULT_ID, PAINTINGS, Painting
 from ..socratic import STAGES, AuraTurn, Choice, Info, Message
 from ..theme import (BG, BORDER, GLASS, GLASS_EDGE, GLASS_LINE, INK, MAX_W, MUTED, PRIMARY, SHADOW_INK,
                      SURFACE, TINT, WHITE, WIDE_W, WINE_LIGHT)
-from ..ui import (H, NAV_PAINTING, T, V, body, bottom_sheet, cropped_image, glass, icon, logo, nav_bar,
-                  screen, source_line, surface_field, top_bar, zoom_badge)
+from ..ui import (H, NAV_PAINTING, T, V, body, bottom_sheet, compact, cropped_image, glass, icon, logo,
+                  nav_bar, screen, source_line, surface_field, top_bar, zoom_badge)
 from .viewer import gallery_wall, open_viewer
 
 INFO_BG = "#F3EADB,0.86"     # thẻ tư liệu: be ấm, hơi đậm hơn bong bóng AURA
@@ -235,8 +235,9 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
             items = [V(17.8 if prev is None else 14),
                      *_aura_block(i, m, interactive=(i == last_aura()) and not st.thinking,
                                   header=(i == first))]
-        return ft.Column(items, spacing=0, tight=True,
-                         horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        col = ft.Column(items, spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        compact(col)                       # khối tin nhắn thêm sau khi dựng màn: cũng bỏ control khoảng trống
+        return col
 
     def sync(animate: bool) -> list[ft.Container]:
         """Thêm khối cho các tin nhắn chưa có trên màn hình; trả về các khối mới."""
