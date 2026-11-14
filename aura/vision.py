@@ -53,21 +53,60 @@ class ScanResult:
 
 
 def available() -> bool:
+    """Có cài OpenCV + numpy không. Chỉ DÒ, không nạp (nạp cv2 tốn ~15 MB RAM và vài giây CPU trên máy
+    chủ yếu: để dành tới lúc thật sự quét, và làm trong luồng phụ để giao diện không đứng)."""
+    from importlib.util import find_spec
     try:
-        import cv2  # noqa: F401
-        import numpy  # noqa: F401
-        return True
-    except Exception:
+        return find_spec("cv2") is not None and find_spec("numpy") is not None
+    except (ImportError, ValueError):
         return False
+
+
+_cv_ready = False
+
+
+def _cv():
+    """Nạp OpenCV một lần. Chạy 1 luồng: máy chủ chỉ có 0,1 CPU, nhiều luồng không nhanh hơn mà còn
+    tốn RAM và giành CPU của các phiên khác."""
+    global _cv_ready
+    import cv2
+    if not _cv_ready:
+        cv2.setNumThreads(1)
+        _cv_ready = True
+    return cv2
+
+
+def _trim_memory() -> None:
+    """Linux: trả phần RAM vừa giải phóng (ảnh, ma trận tạm) về cho hệ điều hành ngay."""
+    if os.name != "posix":
+        return
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
+def _sha1(path: str) -> str:
+    import hashlib
+    with open(path, "rb") as f:
+        return hashlib.sha1(f.read()).hexdigest()
+
+
+def _config_tag() -> str:
+    """Tệp điểm tính sẵn chỉ dùng được khi cấu hình giống hệt."""
+    cv2 = _cv()
+    return f"v1|{LONG_SIDE}|{N_FEATURES}|{REF_BLURS}|{cv2.__version__.split('.')[0]}"
 
 
 class Recognizer:
     """Bộ nhận diện dùng chung cho cả máy chủ (mọi phiên). An toàn khi gọi từ nhiều luồng."""
 
-    def __init__(self, paintings, assets_dir: str):
+    def __init__(self, paintings, assets_dir: str, refs_file: str | None = None):
         self._paintings = list(paintings)
         self._assets = assets_dir
-        self._refs = None             # [(pid, pts Nx2, descriptors, (h, w))]
+        self._refs_file = refs_file
+        self._refs = None             # [(pid, pts Nx2 float32, descriptors float32, (h, w))]
         self._lock = threading.Lock()
 
     @property
@@ -75,41 +114,104 @@ class Recognizer:
         return self._refs is not None
 
     def warm(self) -> None:
-        """Tìm sẵn điểm đặc trưng của các bức tranh gốc (chạy một lần, khoảng 1 giây trên máy thường)."""
+        """Nạp điểm đặc trưng của các bức tranh gốc (một lần).
+
+        Đọc từ tệp tính sẵn (aura/scan_refs.npz, tạo bằng `python -m aura.vision`): gần như tức thì.
+        Bức nào chưa có trong tệp, hoặc ảnh đã đổi (so mã sha1), thì tự tính lại: ~0,2 giây CPU mỗi bức
+        (trên máy chủ 0,1 CPU là vài giây), nên nhớ chạy lại lệnh trên mỗi khi thêm/đổi ảnh tranh."""
         if self._refs is not None:
             return
         with self._lock:
             if self._refs is not None:
                 return
-            import cv2
-            import numpy as np
             t0 = time.perf_counter()
-            sift = cv2.SIFT_create(nfeatures=N_FEATURES)
-            refs = []
+            stored = self._load_file()
+            refs, fresh = [], 0
             for p in self._paintings:
                 path = os.path.join(self._assets, p.image)
-                img = cv2.imdecode(np.fromfile(path, np.uint8), cv2.IMREAD_GRAYSCALE)
-                if img is None:
-                    print(f"[scan] không đọc được ảnh gốc {p.image}")
-                    continue
-                img = _shrink(img)
-                for blur in REF_BLURS:
-                    g = cv2.GaussianBlur(img, (0, 0), blur) if blur else img
-                    kp, des = sift.detectAndCompute(g, None)
-                    if des is not None and len(kp) >= 8:
-                        pts = np.float32([k.pt for k in kp])
-                        refs.append((p.id, pts, des, g.shape[:2]))
+                got = stored.get(p.id)
+                if got is None or got[0] != _sha1(path):
+                    got = (None, self._compute(path))
+                    fresh += 1
+                refs += [(p.id, pts, des, shape) for pts, des, shape in got[1]]
             self._refs = refs
             print(f"[scan] đã nhớ {len(refs)} bản của {len(self._paintings)} bức "
-                  f"trong {(time.perf_counter() - t0) * 1000:.0f} ms")
+                  f"({fresh} bức tính mới) trong {(time.perf_counter() - t0) * 1000:.0f} ms")
+
+    def _compute(self, path: str) -> list:
+        cv2 = _cv()
+        import numpy as np
+        img = cv2.imdecode(np.fromfile(path, np.uint8), cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            print(f"[scan] không đọc được ảnh gốc {path}")
+            return []
+        img = _shrink(img)
+        sift = cv2.SIFT_create(nfeatures=N_FEATURES)
+        out = []
+        for blur in REF_BLURS:
+            g = cv2.GaussianBlur(img, (0, 0), blur) if blur else img
+            kp, des = sift.detectAndCompute(g, None)
+            if des is not None and len(kp) >= 8:
+                out.append((np.float32([k.pt for k in kp]), des.astype(np.float32), g.shape[:2]))
+        return out
+
+    def _load_file(self) -> dict:
+        """{pid: (sha1 ảnh gốc, [(pts, des, shape)...])} từ tệp tính sẵn; tệp thiếu/hỏng/khác cấu hình -> {}."""
+        if not self._refs_file or not os.path.exists(self._refs_file):
+            return {}
+        _cv()
+        import numpy as np
+        try:
+            with np.load(self._refs_file, allow_pickle=False) as z:
+                if str(z["config"]) != _config_tag():
+                    print("[scan] tệp điểm tính sẵn khác cấu hình, tính lại")
+                    return {}
+                out: dict = {}
+                for pid, sha, n_levels in zip(z["pids"], z["shas"], z["levels"]):
+                    levels = []
+                    for k in range(int(n_levels)):
+                        key = f"{pid}__{k}"
+                        h, w = (int(x) for x in z[key + "__shape"])
+                        levels.append((z[key + "__pts"].astype(np.float32),
+                                       z[key + "__des"].astype(np.float32), (h, w)))
+                    out[str(pid)] = (str(sha), levels)
+                return out
+        except Exception as e:
+            print(f"[scan] không đọc được tệp điểm tính sẵn: {e}")
+            return {}
+
+    def save_file(self, path: str) -> None:
+        """Tính điểm của mọi bức và ghi ra tệp (descriptor SIFT là số nguyên 0-255 -> lưu 1 byte, không mất gì)."""
+        import numpy as np
+        arrays = {"config": np.array(_config_tag())}
+        pids, shas, levels = [], [], []
+        for p in self._paintings:
+            src = os.path.join(self._assets, p.image)
+            got = self._compute(src)
+            pids.append(p.id)
+            shas.append(_sha1(src))
+            levels.append(len(got))
+            for k, (pts, des, shape) in enumerate(got):
+                key = f"{p.id}__{k}"
+                arrays[key + "__pts"] = pts.astype(np.float32)
+                arrays[key + "__des"] = np.clip(np.rint(des), 0, 255).astype(np.uint8)
+                arrays[key + "__shape"] = np.array(shape, np.int32)
+        arrays.update(pids=np.array(pids), shas=np.array(shas), levels=np.array(levels, np.int32))
+        np.savez_compressed(path, **arrays)
 
     def recognize(self, data: bytes) -> ScanResult:
         t0 = time.perf_counter()
         try:
-            import cv2
+            cv2 = _cv()
             import numpy  # noqa: F401
         except Exception:
             return ScanResult("unavailable")
+        try:
+            return self._recognize(cv2, data, t0)
+        finally:
+            _trim_memory()
+
+    def _recognize(self, cv2, data: bytes, t0: float) -> ScanResult:
         self.warm()
         color = _decode(data)
         if color is None:
@@ -144,7 +246,7 @@ class Recognizer:
 
     def _match(self, gray):
         """So ảnh (xám, đã thu nhỏ) với mọi bản nhớ của mọi bức. Trả (trạng thái, xếp hạng theo inliers)."""
-        import cv2
+        cv2 = _cv()
         import numpy as np
         sift = cv2.SIFT_create(nfeatures=N_FEATURES)
         kp, des = sift.detectAndCompute(gray, None)
@@ -176,7 +278,7 @@ class Recognizer:
 
     def _detail(self, pid, H, rshape, qshape) -> str | None:
         """Ảnh chụp chỉ phủ một phần bức tranh -> tâm ảnh rơi vào chi tiết nào (Detail.crop)?"""
-        import cv2
+        cv2 = _cv()
         import numpy as np
         p = next((x for x in self._paintings if x.id == pid), None)
         if p is None or not p.details:
@@ -197,7 +299,7 @@ class Recognizer:
 
 
 def _shrink(img, long_side: int = LONG_SIDE):
-    import cv2
+    cv2 = _cv()
     s = long_side / max(img.shape[:2])
     return cv2.resize(img, None, fx=s, fy=s, interpolation=cv2.INTER_AREA) if s < 1 else img
 
@@ -205,7 +307,7 @@ def _shrink(img, long_side: int = LONG_SIDE):
 def _decode(data: bytes):
     """Đọc ảnh. Ảnh điện thoại 12-48 MP rất lớn: đọc thẳng ở 1/4 hoặc 1/2 kích thước (JPEG làm được
     việc này rất nhanh), chỉ đọc đủ cỡ khi ảnh vốn đã nhỏ."""
-    import cv2
+    cv2 = _cv()
     import numpy as np
     buf = np.frombuffer(data, np.uint8)
     img = None
@@ -221,7 +323,7 @@ def _decode(data: bytes):
 
 def _sane(H, ref_shape, photo_shape) -> bool:
     """Ảnh 4 góc tranh gốc lên ảnh chụp phải là tứ giác lồi, kích thước hợp lý (chặn nhận nhầm)."""
-    import cv2
+    cv2 = _cv()
     import numpy as np
     try:
         Hi = np.linalg.inv(H)
@@ -245,5 +347,17 @@ def recognizer() -> Recognizer:
     if _shared is None:
         from .data import ALL_PAINTINGS
         here = os.path.dirname(os.path.abspath(__file__))
-        _shared = Recognizer(ALL_PAINTINGS, os.path.join(os.path.dirname(here), "assets"))
+        _shared = Recognizer(ALL_PAINTINGS, os.path.join(os.path.dirname(here), "assets"), REFS_FILE)
     return _shared
+
+
+REFS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scan_refs.npz")
+
+if __name__ == "__main__":
+    # Tính sẵn điểm đặc trưng của các bức trong Kho tranh (chạy lại mỗi khi thêm/đổi ảnh tranh):
+    #   python -m aura.vision
+    from .data import ALL_PAINTINGS
+    here = os.path.dirname(os.path.abspath(__file__))
+    rec = Recognizer(ALL_PAINTINGS, os.path.join(os.path.dirname(here), "assets"))
+    rec.save_file(REFS_FILE)
+    print(f"Đã ghi {REFS_FILE} ({os.path.getsize(REFS_FILE) / 1024:.0f} KB) cho {len(ALL_PAINTINGS)} bức")

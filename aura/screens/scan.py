@@ -131,8 +131,11 @@ def build(app, q) -> ft.View:
                          12, 400, MUTED, expand=True)], spacing=0, vertical_alignment=ft.CrossAxisAlignment.START)
 
     def shoot_button(text: str) -> ft.Control:
-        return primary_button(text, lambda e: app.page.run_task(start_scan), leading="camera", pill=True,
-                              height=56, size=16)
+        # action: trình duyệt mở hộp chọn ảnh NGAY trong cú chạm (bắt buộc với Safari trên iPhone);
+        # ảnh chọn xong được gửi về handle_photo qua app.on_photo
+        btn = primary_button(text, lambda e: None, leading="camera", pill=True, height=56, size=16)
+        btn.action = app.pick_action()
+        return btn
 
     label = T("ĐANG GỬI ẢNH", 10, 600, PRIMARY, ls=1.0)
 
@@ -237,7 +240,9 @@ def build(app, q) -> ft.View:
         ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def again_link() -> ft.Control:
-        return text_link("Chụp bức khác", lambda e: app.page.run_task(start_scan), size=14, color=PRIMARY)
+        link = text_link("Chụp bức khác", lambda e: None, size=14, color=PRIMARY)
+        link.action = app.pick_action()
+        return link
 
     def render() -> ft.Control:
         if not ok_engine:
@@ -275,16 +280,9 @@ def build(app, q) -> ft.View:
         except Exception:
             pass
 
-    # ---- chụp / chọn ảnh rồi nhận diện ---------------------------------------------------------------
-    async def start_scan() -> None:
-        if st.phase == "working" or not ok_engine:
-            return
-        try:
-            f = await app.pick_photo()
-        except Exception as ex:
-            print(f"[scan] không mở được hộp chọn ảnh: {ex}")
-            f = None
-        if f is None:                          # người dùng huỷ
+    # ---- nhận ảnh vừa chụp / chọn rồi nhận diện -----------------------------------------------------
+    async def handle_photo(f) -> None:
+        if f is None or st.phase == "working" or not ok_engine:     # người dùng huỷ / đang xử lý ảnh khác
             return
         st.declined = False
         if f.size and f.size > SCAN_MAX_BYTES:
@@ -325,6 +323,7 @@ def build(app, q) -> ft.View:
                 print(f"[scan] chuẩn bị lỗi: {ex}")
 
     holder.content = render()
+    app.on_photo = handle_photo
     if ok_engine:
         app.page.run_task(warm)
     content = body([holder], ref=scroller)

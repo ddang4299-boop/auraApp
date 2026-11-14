@@ -294,13 +294,13 @@ def nav_bar(app, active: int) -> ft.Container:
                       spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             height=NAV_PILL_H - 10, border_radius=(NAV_PILL_H - 10) / 2,
             padding=ft.Padding.symmetric(horizontal=pad), alignment=ft.Alignment.CENTER,
-            bgcolor=NAV_ACTIVE_BG if on else None,
+            bgcolor=NAV_ACTIVE_BG if on else None, ink=True,      # gợn sóng ngay khi chạm, kể cả mạng chậm
             on_click=lambda e, r=route: app.go(r)))
     # Nút Scan tròn ở giữa thanh: mở màn chụp ảnh nhận diện tranh (đang mở thì có vòng sáng quanh nút)
     items.insert(2, ft.Container(icon("scan-camera", 21, WHITE), width=44, height=44, border_radius=22,
                                  bgcolor=PRIMARY, alignment=ft.Alignment.CENTER, tooltip="Scan ảnh tác phẩm",
                                  border=ft.Border.all(3, NAV_ACTIVE_BG) if active == NAV_SCAN else None,
-                                 on_click=lambda e: app.go("/scan")))
+                                 ink=True, on_click=lambda e: app.go("/scan")))
     return ft.Container(
         ft.Row(items, spacing=0 if narrow else 2, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         height=NAV_PILL_H, padding=ft.Padding.symmetric(horizontal=10 if narrow else 4, vertical=4),

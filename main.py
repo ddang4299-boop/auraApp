@@ -6,6 +6,7 @@ Chạy trên điện thoại thật (app Flet):           flet run --android  / 
 """
 import os
 import secrets
+import sys
 import tempfile
 
 import flet as ft
@@ -50,6 +51,31 @@ def _skip_send_log() -> None:
     FletApp.send_message = send_message
 
 
+def _tune_memory() -> None:
+    """Máy chủ Linux (Render, 512 MB RAM): bớt RAM "phình" của bộ cấp phát bộ nhớ glibc.
+
+    - glibc tạo một vùng nhớ riêng ("arena") cho mỗi luồng hay giành nhau cấp phát; máy chủ có nhiều luồng
+      (gọi AI, Scan...) nên RAM phình dần dù dữ liệu thật không nhiều. Giới hạn còn 2 arena.
+    - Phần RAM đã giải phóng (phiên hết hạn, ảnh Scan...) không tự trả về hệ điều hành: 5 phút trả một lần."""
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import ctypes
+        import threading
+        import time
+        libc = ctypes.CDLL("libc.so.6")
+        libc.mallopt(-8, 2)                    # M_ARENA_MAX = 2
+
+        def trim_forever():
+            while True:
+                time.sleep(300)
+                libc.malloc_trim(0)
+
+        threading.Thread(target=trim_forever, name="aura-malloc-trim", daemon=True).start()
+    except Exception as e:                     # không phải glibc (vd Alpine): bỏ qua
+        print(f"[mem] bỏ qua tinh chỉnh bộ nhớ: {e}")
+
+
 if __name__ == "__main__":
     # Máy chủ (Render...) cấp cổng qua biến PORT; chạy thử web trên máy thì đặt AURA_WEB_PORT.
     port = os.environ.get("AURA_WEB_PORT") or os.environ.get("PORT")
@@ -63,6 +89,11 @@ if __name__ == "__main__":
         os.environ.setdefault("FLET_SECRET_KEY", secrets.token_urlsafe(32))
         os.environ.setdefault("FLET_MAX_UPLOAD_SIZE", str(25 * 1024 * 1024))
         os.environ["AURA_UPLOAD_DIR"] = upload_dir
+        # Người dùng đóng tab: Flet giữ phiên (cả cây giao diện) thêm 1 giờ mặc định rồi mới xoá. Rút
+        # còn 15 phút cho đỡ RAM; quay lại sau đó thì hồ sơ, tranh đã lưu, các cuộc trò chuyện vẫn được
+        # đọc lại từ bộ nhớ trình duyệt.
+        os.environ.setdefault("FLET_SESSION_TIMEOUT", "900")
+        _tune_memory()
         ft.run(main, view=None, host=host, port=int(port), assets_dir="assets", upload_dir=upload_dir)
     else:
         ft.run(main, assets_dir="assets")

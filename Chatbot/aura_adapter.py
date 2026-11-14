@@ -22,6 +22,7 @@ import asyncio
 import hashlib
 import json
 import sys
+import threading
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -83,6 +84,25 @@ def summary_text(a: dict) -> str:
     return "\n".join(lines)
 
 
+# Phần nặng của chatbot (Hub: kịch bản JSON + chỉ mục hỏi đáp; chuỗi LLM: client HTTP của từng nhà cung cấp;
+# engine chung; Hỏi Aura) KHÔNG giữ trạng thái của từng người dùng: trạng thái nằm trong _Session. Nên cả máy
+# chủ dùng CHUNG một bản thay vì mỗi phiên (mỗi tab trình duyệt) dựng một bản riêng: trước đây mỗi phiên
+# tốn thêm 5-7 MB RAM và vài giây CPU trên máy chủ 0,1 CPU. Dùng chung còn có lợi: một phiên gặp Groq báo
+# hết lượt thì bộ ngắt mạch nghỉ Groq cho mọi phiên, không ai phải chờ lỗi lại lần nữa.
+_SHARED: dict = {}
+_SHARED_LOCK = threading.Lock()
+
+
+def _shared(key, factory):
+    obj = _SHARED.get(key)
+    if obj is None:
+        with _SHARED_LOCK:
+            obj = _SHARED.get(key)
+            if obj is None:
+                obj = _SHARED[key] = factory()
+    return obj
+
+
 def _make_llm():
     """LLM nếu .env có key, ngược lại None (Engine chạy chế độ từ khoá offline)."""
     try:
@@ -115,10 +135,12 @@ class AuraChatbotEngine:
             from aura.data import ALL_PAINTINGS
             from aura.topics import ALL as TOPICS
             try:
-                llm = self.hub.llm
+                hub = self.hub
             except Exception:
-                llm = None
-            self._general = GeneralGuide(llm, ALL_PAINTINGS, list(TOPICS.values()))
+                hub = None
+            llm = getattr(hub, "llm", None)
+            self._general = _shared(("general", id(hub)), lambda: GeneralGuide(llm, ALL_PAINTINGS,
+                                                                               list(TOPICS.values())))
         return self._general
 
     # ------------------------------------------------------------------ SocraticEngine
@@ -205,10 +227,11 @@ class AuraChatbotEngine:
         """Engine chung cho tranh chưa có kịch bản; dùng chung AI (và bộ ngắt mạch) với Hub."""
         if self._generic_engine is None:
             try:
-                llm = self.hub.llm
+                hub = self.hub
             except Exception:
-                llm = None
-            self._generic_engine = PaintingSocratic(llm)
+                hub = None
+            llm = getattr(hub, "llm", None)
+            self._generic_engine = _shared(("generic", id(hub)), lambda: PaintingSocratic(llm))
         return self._generic_engine
 
     @staticmethod
@@ -251,9 +274,13 @@ class AuraChatbotEngine:
 
     def _sig(self, script_id: str) -> str:
         if script_id not in self._sigs:
-            data = self.hub.engine(script_id).d
-            raw = json.dumps(data, ensure_ascii=False, sort_keys=True).encode("utf-8")
-            self._sigs[script_id] = hashlib.sha1(raw).hexdigest()[:16]
+            eng = self.hub.engine(script_id)
+            # tính một lần cho mỗi bản Engine (Engine dùng chung; kịch bản sửa xong -> Engine mới -> tính lại)
+            sig = getattr(eng, "_aura_sig", None)
+            if sig is None:
+                raw = json.dumps(eng.d, ensure_ascii=False, sort_keys=True).encode("utf-8")
+                sig = eng._aura_sig = hashlib.sha1(raw).hexdigest()[:16]
+            self._sigs[script_id] = sig
         return self._sigs[script_id]
 
     # ------------------------------------------------------------------ internals
@@ -261,7 +288,7 @@ class AuraChatbotEngine:
     def hub(self):
         if self._hub is None:
             from .hub import Hub
-            self._hub = Hub(llm=_make_llm())
+            self._hub = _shared("hub", lambda: Hub(llm=_make_llm()))
         return self._hub
 
     def _script_for(self, painting: Painting) -> Optional[str]:

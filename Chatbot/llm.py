@@ -5,8 +5,10 @@ make_llm() trả None nếu thiếu key -> Engine tự chạy chế độ keywor
 """
 from __future__ import annotations
 
+import importlib.util
 import os
 import re
+import threading
 import time
 from typing import Callable, Optional
 
@@ -18,6 +20,35 @@ except ImportError:
 
 LLMFn = Callable[[str, str, int], str]
 TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))   # giây; quá hạn thì báo lỗi (để chuyển provider dự phòng), không treo
+
+
+def _need(module: str, pip_name: str) -> None:
+    """Kiểm tra thư viện CÓ cài không mà KHÔNG nạp nó (nạp thật để dành tới lần gọi đầu tiên)."""
+    try:
+        found = importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        found = False
+    if not found:
+        raise ImportError(f"thiếu thư viện (pip install {pip_name})")
+
+
+class _LazyClient:
+    """Client của nhà cung cấp AI được tạo ở lần gọi ĐẦU TIÊN, không phải lúc dựng chuỗi LLM.
+    Mỗi thư viện (openai, google-genai) tốn khoảng 20 MB RAM khi nạp; nhà cung cấp dự phòng (vd Gemini)
+    thường cả ngày không cần tới, nên không nạp thì máy chủ nhẹ hẳn."""
+    _client = None
+    _lock: threading.Lock
+
+    def _make_client(self):
+        raise NotImplementedError
+
+    @property
+    def client(self):
+        if self._client is None:
+            with self._lock:
+                if self._client is None:
+                    self._client = self._make_client()
+        return self._client
 
 
 def _is_timeout(e: Exception) -> bool:
@@ -74,21 +105,25 @@ class CircuitBreaker:
         return self.cooldown
 
 
-class GeminiLLM:
+class GeminiLLM(_LazyClient):
     """Google AI Studio (free tier). pip install google-genai"""
 
     def __init__(self, model: str, api_key: str, temperature: float = 0.2):
+        _need("google.genai", "google-genai")
+        self._key, self._lock = api_key, threading.Lock()
+        self.model, self.temperature = model, temperature
+        self.label = f"gemini/{model}"
+        self._variant = 0          # nhớ kiểu cấu hình đã chạy được, lần sau dùng luôn
+
+    def _make_client(self):
         from google import genai
         from google.genai import types
         try:
             # Google không nhận thời hạn dưới 10 giây (báo lỗi 400 "Minimum allowed deadline is 10s")
-            self.client = genai.Client(api_key=api_key,
-                                       http_options=types.HttpOptions(timeout=int(max(TIMEOUT, 10) * 1000)))
+            return genai.Client(api_key=self._key,
+                                http_options=types.HttpOptions(timeout=int(max(TIMEOUT, 10) * 1000)))
         except Exception:  # SDK cũ không có http_options
-            self.client = genai.Client(api_key=api_key)
-        self.model, self.temperature = model, temperature
-        self.label = f"gemini/{model}"
-        self._variant = 0          # nhớ kiểu cấu hình đã chạy được, lần sau dùng luôn
+            return genai.Client(api_key=self._key)
 
     def __call__(self, system: str, user: str, max_tokens: int = 450) -> str:
         from google.genai import types
@@ -117,16 +152,20 @@ class GeminiLLM:
         raise last
 
 
-class OpenAICompatLLM:
+class OpenAICompatLLM(_LazyClient):
     """Groq / OpenRouter / bất kỳ API tương thích OpenAI. pip install openai"""
 
     def __init__(self, model: str, api_key: str, base_url: str, temperature: float = 0.2):
+        _need("openai", "openai")
+        self._key, self._base_url, self._lock = api_key, base_url, threading.Lock()
+        self.model, self.temperature = model, temperature
+        self.label = f"{base_url.split('//')[1].split('/')[0]}/{model}"
+
+    def _make_client(self):
         from openai import OpenAI
         # max_retries=0: hết lượt (429) thì báo lỗi NGAY để chuyển sang model dự phòng, thay vì thư viện
         # tự ngồi chờ 10-20 giây rồi thử lại trong khi người dùng nhìn màn hình đứng.
-        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=TIMEOUT, max_retries=0)
-        self.model, self.temperature = model, temperature
-        self.label = f"{base_url.split('//')[1].split('/')[0]}/{model}"
+        return OpenAI(api_key=self._key, base_url=self._base_url, timeout=TIMEOUT, max_retries=0)
 
     def __call__(self, system: str, user: str, max_tokens: int = 450) -> str:
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]

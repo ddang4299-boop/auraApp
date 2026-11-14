@@ -29,7 +29,7 @@ CHATS_VERSION = 1
 ASK_KEY = "aura.ask"                   # cuộc hỏi đáp ở tab "Hỏi Aura"
 SAVED_KEY = "aura.saved"               # tranh đã lưu (dấu trang)
 ASK_KEEP = 60                          # chỉ cất ngần này tin gần nhất của "Hỏi Aura"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 # Các tab trên thanh điều hướng: mở tab thì giữ sẵn Trang chủ ở đáy stack (xem _show)
 ROOT_ROUTES = {"/", "/home", "/gallery", "/saved", "/scan", "/ask", "/settings"}
@@ -158,9 +158,10 @@ class AuraApp:
         # Dịch vụ của Flet: lưu trữ cục bộ và mở trình duyệt/URL.
         self.prefs = ft.SharedPreferences()
         self.launcher = ft.UrlLauncher()
-        # Hộp chọn ảnh cho Scan (trên điện thoại có mục "Chụp ảnh"); xem pick_photo / receive_photo.
-        self.picker = ft.FilePicker(on_upload=self._on_upload)
+        # Hộp chọn ảnh cho Scan (trên điện thoại có mục "Chụp ảnh"); xem pick_action / receive_photo.
+        self.picker = ft.FilePicker(on_upload=self._on_upload, on_result=self._on_pick_result)
         self._uploads: dict[str, asyncio.Future] = {}
+        self.on_photo = None               # màn Scan gắn hàm nhận ảnh vừa chọn vào đây
         # Điều hướng nhanh (xem go / _on_route_change):
         #   _epoch  tăng khi dữ liệu dùng chung đổi (hồ sơ, tranh đã lưu) -> màn cũ trong stack dựng lại
         #   _url    đường dẫn trình duyệt đang hiện (mình đã đẩy hoặc trình duyệt báo về)
@@ -482,14 +483,22 @@ class AuraApp:
         self.page.run_task(self._write_pref, ASK_KEY, json.dumps({"v": 1, "messages": msgs}, ensure_ascii=False))
 
     # ---- Scan: lấy ảnh người dùng chụp / chọn --------------------------------
-    async def pick_photo(self):
-        """Mở hộp chọn ảnh. Trên điện thoại, trình duyệt cho chọn "Chụp ảnh" (mở camera) hoặc thư viện ảnh.
-        Trả về tệp đã chọn (FilePickerFile) hoặc None nếu người dùng huỷ."""
+    def pick_action(self) -> ft.PickFiles:
+        """Gắn vào nút chụp (thuộc tính `action`): TRÌNH DUYỆT mở hộp chọn ảnh ngay trong cú chạm, không
+        đợi hỏi máy chủ Python. Safari trên iPhone chỉ cho mở hộp chọn tệp trong lúc đang xử lý cú chạm,
+        nên cách cũ (gọi pick_files từ Python, phải đi một vòng qua máy chủ) bị Safari lặng lẽ chặn.
+        Trên điện thoại, hộp chọn có mục "Chụp ảnh" (mở camera). Ảnh chọn xong về _on_pick_result."""
         # bản web chạy không có thư mục nhận ảnh (vd `flet run --web`): đọc ảnh thẳng qua kết nối
         with_data = bool(self.page.web and not os.environ.get("AURA_UPLOAD_DIR"))
-        files = await self.picker.pick_files(dialog_title="Chọn ảnh bức tranh", file_type=ft.FilePickerFileType.IMAGE,
-                                             allow_multiple=False, with_data=with_data)
-        return files[0] if files else None
+        # cancel_upload_on_window_blur=False: mở camera làm trang web mất tiêu điểm; để mặc định (True)
+        # thì Flet coi đó là người dùng huỷ và bỏ luôn ảnh vừa chụp.
+        return ft.PickFiles(self.picker, dialog_title="Chọn ảnh bức tranh", file_type=ft.FilePickerFileType.IMAGE,
+                            with_data=with_data, cancel_upload_on_window_blur=False)
+
+    async def _on_pick_result(self, e) -> None:
+        handler = self.on_photo
+        if handler is not None:
+            await handler(e.files[0] if e.files else None)
 
     async def receive_photo(self, f) -> bytes:
         """Lấy nội dung ảnh vừa chọn.

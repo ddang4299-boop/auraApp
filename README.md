@@ -190,6 +190,18 @@ Nếu chưa có khoá, app hiện hộp thoại hướng dẫn kèm nút **Dùng
 - Lúc mới mở, bản web đôi khi báo bề rộng tạm (~164px): app chờ bề rộng thật (tối đa 1,5 giây) rồi mới
   dựng màn, nên mỗi lần mở chỉ dựng một lần (máy chủ miễn phí 0,1 CPU, dựng hai lần mất thêm ~1 giây).
 - Máy chủ Render nén sẵn các file lớn của Flutter (Brotli), không cần nén thêm trong app.
+- RAM máy chủ (gói miễn phí 512 MB):
+  - Phần nặng của chatbot (kịch bản, chỉ mục hỏi đáp, chuỗi LLM, Hỏi Aura) dùng CHUNG cho mọi người dùng
+    thay vì mỗi tab trình duyệt một bản (đo được: 5 phiên từ +69 MB còn +6 MB).
+  - Thư viện AI (`openai`, `google-genai`, mỗi cái ~20 MB) chỉ nạp khi gọi AI lần đầu; Gemini là dự phòng
+    nên thường không bao giờ nạp. OpenCV (Scan) chỉ nạp khi có người dùng Scan.
+  - Người dùng đóng tab: phiên được xoá sau 15 phút (mặc định của Flet là 1 giờ). Trên Linux, bộ cấp phát
+    bộ nhớ được giới hạn 2 arena và trả RAM thừa về hệ điều hành 5 phút một lần (`main.py`).
+- Scan: điểm đặc trưng của tranh gốc được tính sẵn trong `aura/scan_refs.npz` (~0,5 MB), máy chủ khỏi phải
+  tính lúc chạy. **Thêm hoặc đổi ảnh tranh thì chạy `python -m aura.vision` để tạo lại** (quên cũng không
+  sao: app tự nhận ra ảnh đã đổi và tính lại bức đó, chỉ chậm hơn lần đầu).
+- Nút chụp ở Scan dùng `action=ft.PickFiles(...)`: trình duyệt mở hộp chọn ảnh ngay trong cú chạm. Safari
+  trên iPhone chặn hộp chọn tệp nếu lệnh mở phải đi vòng qua máy chủ Python (cách `pick_files()`).
 
 ## Kiểm thử
 
