@@ -1,2 +1,4 @@
 flet==1.0.5
 httpx>=0.27
+# Scan ảnh tác phẩm (aura/vision.py): OpenCV bản không giao diện, kéo theo numpy
+opencv-python-headless==4.11.0.86

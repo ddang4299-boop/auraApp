@@ -6,3 +6,5 @@ httpx>=0.27
 google-genai
 openai
 python-dotenv
+# Scan ảnh tác phẩm (aura/vision.py): OpenCV bản không giao diện, kéo theo numpy
+opencv-python-headless==4.11.0.86

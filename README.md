@@ -41,6 +41,7 @@ aura/
   topics.py             Nội dung trang Khám phá: thời kỳ, mốc thời gian, khái niệm
   socratic.py           Interface hội thoại (AuraTurn...) + kịch bản mẫu dự phòng + lưu/đọc lịch sử chat
   auth.py               Đăng nhập Google (OAuth 2.0 + PKCE)
+  vision.py             Scan: nhận diện tranh trong ảnh chụp bằng điểm đặc trưng (OpenCV SIFT + RANSAC)
   app.py                Điều hướng, trạng thái, phiên đăng nhập, lưu cuộc trò chuyện vào trình duyệt
   screens/
     auth.py             Chào mừng (đăng nhập Google hoặc bỏ qua)
@@ -52,6 +53,7 @@ aura/
     viewer.py           Xem tranh phóng to
     chat.py             Trò chuyện về tranh (Socrates quanh một bức, câu hỏi nhanh, bắt đầu lại)
     ask.py              Hỏi Aura: hỏi đáp mở về Phục Hưng, tả tranh để AURA đoán tên và mở đúng bức
+    scan.py             Scan tác phẩm: mẹo chụp, chụp/chọn ảnh, kết quả nhận diện
     sources.py          Tư liệu: các thẻ tư liệu chatbot dựa vào khi trả lời
     settings.py         Cài đặt, Giới thiệu, Chính sách quyền riêng tư
     detail.py           Chi tiết tranh (phóng to)
@@ -94,6 +96,7 @@ requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server
 | `/painting/<id>` | Tổng quan tranh |
 | `/chat/<id>` | Trò chuyện về một bức tranh (Socrates) |
 | `/ask` | Hỏi Aura: hỏi đáp mở, nhận diện tranh từ mô tả |
+| `/scan` | Scan tác phẩm: chụp ảnh để nhận ra bức tranh |
 | `/sources/<id>` | Tư liệu chatbot dùng để trả lời |
 | `/detail/<id>/<chi-tiết>` | Chi tiết tranh |
 | `/quiz/<id>`, `/result/<id>` | Quiz & cảm nhận, Kết quả |
@@ -102,7 +105,11 @@ requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server
 
 Thanh điều hướng nổi (dạng viên thuốc): **Khám phá** · **Kho tranh** · **Scan** · **Hỏi Aura** · **Cài đặt**.
 - Kho tranh gồm Bộ sưu tập và Đã lưu (tranh đã bấm dấu trang, lưu trong trình duyệt).
-- Nút tròn ở giữa là **Scan ảnh tác phẩm** (chưa làm, bấm vào hiện thông báo sắp ra mắt).
+- Nút tròn ở giữa là **Scan ảnh tác phẩm**: chụp cả bức hay chỉ một phần, AURA nhận ra bức tranh và mở đúng
+  trang (chụp sát một chi tiết thì gợi ý mở chi tiết đó). Chưa chắc thì hỏi "Có phải bức này không?",
+  không nhận ra thì gợi ý chụp lại. Cách làm: `aura/vision.py` "nhớ" sẵn khoảng 1.500 điểm đặc trưng của mỗi
+  bức (SIFT, ở 3 mức nét), ghép với điểm trong ảnh chụp rồi kiểm tra hình học bằng RANSAC. Không cần huấn
+  luyện model, thêm tranh vào `data.py` là Scan nhận được. Ảnh gửi lên máy chủ, nhận diện xong xoá ngay.
 - Hỏi Aura: hỏi về thời Phục Hưng hay bất kỳ bức tranh nào; tả một bức tranh thì AURA đoán tên, bức nào có
   trong Kho tranh thì hiện thẻ có nút mở thẳng bức đó.
 - Trang của mỗi bức tranh có nút trò chuyện về bức đó và liên kết tới phần Tư liệu.

@@ -23,10 +23,14 @@ ABOUT = [
      "Tab Hỏi Aura dành cho câu hỏi mở: kiến thức về thời Phục Hưng, về bất kỳ bức tranh nào trên thế giới, "
      "hoặc tả một bức tranh để AURA đoán tên và dẫn bạn tới đúng bức trong Kho tranh. Câu trả lời do AI soạn "
      "nên có thể chưa hoàn hảo; thông tin ngoài tư liệu của ứng dụng luôn được ghi rõ là kiến thức chung."),
+    ("Scan tác phẩm",
+     "Chụp một bức tranh (cả bức hay chỉ một phần), AURA so các điểm đặc trưng trong ảnh với tranh trong Kho "
+     "tranh để nhận ra bức đó, kể cả khi ảnh chụp nghiêng, thiếu góc hay hơi mờ. Khi chưa chắc, AURA hỏi lại "
+     "thay vì đoán bừa. Scan không dùng AI bên ngoài: việc nhận diện chạy ngay trên máy chủ của AURA."),
     ("Nguồn & giấy phép",
      "Thông tin tác phẩm: Bảo tàng Louvre (Paris) và National Gallery (London). Ảnh tranh và ảnh minh hoạ: "
      "Wikimedia Commons, thuộc phạm vi công cộng. Icon: Lucide (giấy phép ISC). Phông chữ: Inter, Lora, "
-     "Montserrat (SIL Open Font License)."),
+     "Montserrat (SIL Open Font License). Nhận diện ảnh: OpenCV (giấy phép Apache 2.0)."),
 ]
 
 PRIVACY = [
@@ -45,12 +49,17 @@ PRIVACY = [
      "thứ ba (hiện là Groq, Google Gemini, OpenRouter hoặc OpenAI, tuỳ dịch vụ nào đang sẵn sàng) để soạn câu "
      "trả lời. Máy chủ của AURA không ghi lại nội dung bạn gõ vào nhật ký. Vì vậy, đừng gõ thông tin cá nhân "
      "nhạy cảm vào ô trò chuyện."),
+    ("Ảnh chụp ở Scan",
+     "Khi bạn dùng Scan, ảnh được gửi lên máy chủ của AURA để nhận diện bức tranh. Ảnh chỉ nằm tạm trên máy "
+     "chủ trong lúc nhận diện rồi bị xoá ngay; AURA không lưu lại ảnh và không gửi ảnh cho dịch vụ AI hay bên "
+     "thứ ba nào. Một bản thu nhỏ của ảnh được giữ trong phiên đang mở để hiện lại kết quả cho bạn, và mất đi "
+     "khi bạn đóng trang."),
     ("Xoá dữ liệu",
      "Nút Bắt đầu lại trong mỗi cuộc trò chuyện xoá cuộc trò chuyện đó. Đăng xuất xoá hồ sơ, tranh đã lưu và "
      "mọi cuộc trò chuyện trên thiết bị này. Bạn cũng có thể xoá dữ liệu trang web trong cài đặt trình duyệt."),
     ("Thay đổi",
-     "AURA là dự án học tập; chính sách này có thể được cập nhật khi ứng dụng thêm tính năng (ví dụ Scan ảnh "
-     "tác phẩm). Mọi thay đổi sẽ được ghi tại đây."),
+     "AURA là dự án học tập; chính sách này có thể được cập nhật khi ứng dụng thêm tính năng. Mọi thay đổi "
+     "sẽ được ghi tại đây."),
 ]
 
 

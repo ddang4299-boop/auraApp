@@ -5,7 +5,10 @@ import asyncio
 import importlib
 import json
 import os
+import time
+import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import flet as ft
@@ -29,7 +32,9 @@ ASK_KEEP = 60                          # chỉ cất ngần này tin gần nhấ
 APP_VERSION = "1.1.0"
 
 # Các tab trên thanh điều hướng: mở tab thì giữ sẵn Trang chủ ở đáy stack (xem _show)
-ROOT_ROUTES = {"/", "/home", "/gallery", "/saved", "/ask", "/settings"}
+ROOT_ROUTES = {"/", "/home", "/gallery", "/saved", "/scan", "/ask", "/settings"}
+SCAN_MAX_BYTES = 25 * 1024 * 1024      # ảnh lớn hơn thì từ chối (ảnh điện thoại thường 2-12 MB)
+UPLOAD_WAIT = 120                      # chờ tải ảnh lên tối đa ngần này giây
 # Bản web lúc mới mở hay báo bề rộng tạm (vd 164px). Điện thoại thật rộng ít nhất ~320px,
 # nên hẹp hơn TEMP_W thì coi là chưa biết khổ màn hình (xem AuraApp._waiting_width).
 TEMP_W = 300
@@ -64,12 +69,22 @@ class AskState:
 
 
 @dataclass
+class ScanState:
+    """Màn Scan (chỉ giữ trong phiên đang mở, không cất vào trình duyệt)."""
+    phase: str = "intro"               # intro | working | result
+    result: object | None = None       # vision.ScanResult của lần quét gần nhất
+    error: str | None = None           # too_big | upload | bad_image | unavailable
+    declined: bool = False             # người dùng bấm "Không phải" ở câu "Có phải bức này không?"
+
+
+@dataclass
 class AppState:
     profile: Profile | None = None
     saved: set[str] = field(default_factory=set)
     quizzes: dict[str, QuizState] = field(default_factory=dict)
     chats: dict[str, ChatState] = field(default_factory=dict)
     ask: AskState = field(default_factory=AskState)
+    scan: ScanState = field(default_factory=ScanState)
     gallery_tab: str = "all"           # Kho tranh đang mở phần nào: "all" | "saved"
 
     def quiz(self, pid: str) -> QuizState:
@@ -95,6 +110,7 @@ ROUTES = [
     ("/topic/", "topics", "build"),
     ("/sources/", "sources", "build"),
     ("/ask", "ask", "build"),
+    ("/scan", "scan", "build"),
     ("/settings", "settings", "build"),
     ("/about", "settings", "about"),
     ("/privacy", "settings", "privacy"),
@@ -142,6 +158,9 @@ class AuraApp:
         # Dịch vụ của Flet: lưu trữ cục bộ và mở trình duyệt/URL.
         self.prefs = ft.SharedPreferences()
         self.launcher = ft.UrlLauncher()
+        # Hộp chọn ảnh cho Scan (trên điện thoại có mục "Chụp ảnh"); xem pick_photo / receive_photo.
+        self.picker = ft.FilePicker(on_upload=self._on_upload)
+        self._uploads: dict[str, asyncio.Future] = {}
         # Điều hướng nhanh (xem go / _on_route_change):
         #   _epoch  tăng khi dữ liệu dùng chung đổi (hồ sơ, tranh đã lưu) -> màn cũ trong stack dựng lại
         #   _url    đường dẫn trình duyệt đang hiện (mình đã đẩy hoặc trình duyệt báo về)
@@ -462,6 +481,54 @@ class AuraApp:
         msgs = self.state.ask.messages[-ASK_KEEP:]
         self.page.run_task(self._write_pref, ASK_KEY, json.dumps({"v": 1, "messages": msgs}, ensure_ascii=False))
 
+    # ---- Scan: lấy ảnh người dùng chụp / chọn --------------------------------
+    async def pick_photo(self):
+        """Mở hộp chọn ảnh. Trên điện thoại, trình duyệt cho chọn "Chụp ảnh" (mở camera) hoặc thư viện ảnh.
+        Trả về tệp đã chọn (FilePickerFile) hoặc None nếu người dùng huỷ."""
+        # bản web chạy không có thư mục nhận ảnh (vd `flet run --web`): đọc ảnh thẳng qua kết nối
+        with_data = bool(self.page.web and not os.environ.get("AURA_UPLOAD_DIR"))
+        files = await self.picker.pick_files(dialog_title="Chọn ảnh bức tranh", file_type=ft.FilePickerFileType.IMAGE,
+                                             allow_multiple=False, with_data=with_data)
+        return files[0] if files else None
+
+    async def receive_photo(self, f) -> bytes:
+        """Lấy nội dung ảnh vừa chọn.
+        - App trên máy tính/điện thoại: đọc thẳng tệp.
+        - Bản web: trình duyệt gửi ảnh lên máy chủ qua một đường dẫn có chữ ký, sống 5 phút. Ảnh nằm
+          tạm trong thư mục tạm, đọc xong là xoá ngay (cả ảnh sót lại từ lần trước, quá 10 phút)."""
+        if f.bytes:
+            return f.bytes
+        if f.path:
+            return await asyncio.to_thread(Path(f.path).read_bytes)
+        folder = os.environ.get("AURA_UPLOAD_DIR")
+        if not folder:
+            raise RuntimeError("chưa cấu hình thư mục nhận ảnh")
+        await asyncio.to_thread(_sweep_uploads, folder)
+        name = f"scan_{uuid.uuid4().hex}"
+        dest = Path(folder) / name
+        fut = asyncio.get_running_loop().create_future()
+        self._uploads[f.name] = fut
+        try:
+            await self.picker.upload([ft.FilePickerUploadFile(upload_url=self.page.get_upload_url(name, 300),
+                                                              id=f.id, name=f.name)])
+            await asyncio.wait_for(fut, UPLOAD_WAIT)
+            return await asyncio.to_thread(dest.read_bytes)
+        finally:
+            self._uploads.pop(f.name, None)
+            dest.unlink(missing_ok=True)
+
+    async def _on_upload(self, e) -> None:
+        """Trình duyệt báo tiến độ gửi ảnh: 1.0 = xong, có error = lỗi."""
+        fut = self._uploads.get(e.file_name)
+        if fut is None and len(self._uploads) == 1:
+            fut = next(iter(self._uploads.values()))
+        if fut is None or fut.done():
+            return
+        if e.error:
+            fut.set_exception(RuntimeError(e.error))
+        elif e.progress is not None and e.progress >= 1:
+            fut.set_result(None)
+
     def reset_chat(self, pid: str) -> None:
         """Bắt đầu lại cuộc trò chuyện của một tranh từ đầu."""
         self.state.chats.pop(pid, None)
@@ -610,3 +677,14 @@ class AuraApp:
         if not url.startswith("http"):
             url = "https://" + url
         self.page.run_task(self.launcher.launch_url, url)
+
+
+def _sweep_uploads(folder: str, older_than: float = 600) -> None:
+    """Xoá ảnh Scan sót lại trong thư mục tạm (vd người dùng đóng trang giữa chừng)."""
+    now = time.time()
+    try:
+        for p in Path(folder).glob("scan_*"):
+            if now - p.stat().st_mtime > older_than:
+                p.unlink(missing_ok=True)
+    except OSError:
+        pass

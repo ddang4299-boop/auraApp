@@ -5,6 +5,8 @@ Chạy trên điện thoại thật (app Flet):           flet run --android  / 
 Đóng gói:                                        flet build apk  /  flet build ipa  /  flet build web
 """
 import os
+import secrets
+import tempfile
 
 import flet as ft
 
@@ -55,6 +57,12 @@ if __name__ == "__main__":
         os.environ.setdefault("FLET_FORCE_WEB_SERVER", "true")
         _skip_send_log()
         host = "0.0.0.0" if os.environ.get("PORT") else None   # máy chủ: nhận kết nối từ ngoài
-        ft.run(main, view=None, host=host, port=int(port), assets_dir="assets")
+        # Scan ảnh: trình duyệt gửi ảnh lên máy chủ qua đường dẫn có chữ ký. Khoá ký được tạo ngẫu nhiên
+        # mỗi lần chạy (không lưu ở đâu cả); ảnh nằm tạm trong thư mục tạm, nhận diện xong xoá ngay.
+        upload_dir = os.path.join(tempfile.gettempdir(), "aura_uploads")
+        os.environ.setdefault("FLET_SECRET_KEY", secrets.token_urlsafe(32))
+        os.environ.setdefault("FLET_MAX_UPLOAD_SIZE", str(25 * 1024 * 1024))
+        os.environ["AURA_UPLOAD_DIR"] = upload_dir
+        ft.run(main, view=None, host=host, port=int(port), assets_dir="assets", upload_dir=upload_dir)
     else:
         ft.run(main, assets_dir="assets")
