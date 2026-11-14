@@ -73,6 +73,9 @@ class Painting:
     # Câu hỏi nhanh dưới ô chat (giọng người xem hỏi AURA), giúp người mới có chỗ bắt đầu.
     # Nên chọn câu mà kho tư liệu của tranh trả lời được.
     quick_prompts: list[str] = field(default_factory=list)
+    # Tên khác người xem hay gõ (tiếng Anh, Pháp, Ý, tên tiếng Việt đặc trưng): để "Hỏi Aura" nhận ra bức
+    # tranh và dẫn thẳng tới đây. Tránh tên quá chung (vd "chân dung một người đàn ông").
+    aliases: tuple[str, ...] = ()
 
 
 # Hội thoại của tranh này do kịch bản Chatbot/scripts/Mona_Lisa.json điều khiển.
@@ -128,6 +131,7 @@ MONA_LISA = Painting(
     chat_branches={"BRANCH_2A": "face", "BRANCH_2B": "hands", "BRANCH_2C": "dress",
                    "BRANCH_2D": "landscape", "BRANCH_3C": "landscape"},
     # mỗi câu khớp một thẻ trong kho tư liệu của kịch bản (C1, C2, C8, C4, C5, C9, C7)
+    aliases=("Mona Lisa", "Monna Lisa", "La Gioconda", "Gioconda", "La Joconde", "Joconde"),
     quick_prompts=["Người phụ nữ trong tranh là ai?",
                    "Bức tranh được vẽ khi nào?",
                    "Vì sao bức tranh này nổi tiếng?",
@@ -217,6 +221,8 @@ ARNOLFINI = Painting(
         ),
     ],
     museum=NG,
+    aliases=("Arnolfini", "The Arnolfini Portrait", "Arnolfini Portrait", "Arnolfini Wedding",
+             "vợ chồng Arnolfini"),
     quick_prompts=["Chiếc gương lồi phản chiếu điều gì?",
                    "Sơn dầu là gì?",
                    "Vì sao bức tranh này nổi tiếng?",
@@ -261,6 +267,8 @@ RED_TURBAN = Painting(
                          "Những nếp gấp được tạo bằng nhiều lớp đỏ đậm nhạt khác nhau."),
     },
     museum=NG,
+    aliases=("Người đàn ông đội khăn đỏ", "Man in a Red Turban", "Portrait of a Man in a Red Turban",
+             "Red Turban", "Portrait of a Man (Self Portrait?)"),
     quick_prompts=["Đây có phải tranh tự họa không?",
                    "Dòng chữ trên khung nghĩa là gì?",
                    "Chiếc khăn đỏ được vẽ thế nào?",
@@ -297,6 +305,8 @@ MADONNA = Painting(
                           "Hãy nhìn cử chỉ trước khi tìm ý nghĩa của bông hoa."),
     },
     museum=NG,
+    aliases=("Đức Mẹ hoa cẩm chướng", "The Madonna of the Pinks", "Madonna of the Pinks",
+             "Madonna dei Garofani", "Madonna with the Pinks"),
     quick_prompts=["Hoa cẩm chướng có ý nghĩa gì?",
                    "Raphael vẽ bức này khi nào?",
                    "Bức tranh lớn cỡ nào?",
@@ -333,6 +343,7 @@ LEAL = Painting(
                           "Hãy đọc chậm từng chữ trước khi tìm hiểu ý nghĩa."),
     },
     museum=NG,
+    aliases=("Léal Souvenir", "Leal Souvenir", "Portrait of a Man (Léal Souvenir)", "Timotheos"),
     quick_prompts=["“Leal Souvenir” nghĩa là gì?",
                    "Người trong tranh là ai?",
                    "Trompe-l'œil là gì?",

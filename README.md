@@ -50,16 +50,19 @@ aura/
     onboarding.py       Hướng dẫn 4 bước cho người mở app lần đầu
     painting.py         Tổng quan tranh
     viewer.py           Xem tranh phóng to
-    chat.py             Hỏi Aura (trò chuyện Socrates, câu hỏi nhanh, bắt đầu lại)
+    chat.py             Trò chuyện về tranh (Socrates quanh một bức, câu hỏi nhanh, bắt đầu lại)
+    ask.py              Hỏi Aura: hỏi đáp mở về Phục Hưng, tả tranh để AURA đoán tên và mở đúng bức
     sources.py          Tư liệu: các thẻ tư liệu chatbot dựa vào khi trả lời
+    settings.py         Cài đặt, Giới thiệu, Chính sách quyền riêng tư
     detail.py           Chi tiết tranh (phóng to)
     quiz.py             Quiz & cảm nhận
     result.py           Kết quả & cảm nhận
-    profile.py          Hồ sơ, tài khoản liên kết, thông tin app, đăng xuất
+    profile.py          Thông tin tài khoản: hồ sơ cá nhân, tài khoản liên kết
 Chatbot/                Chatbot Socrates chạy theo kịch bản JSON
   aura_adapter.py       Cầu nối chatbot với màn chat (AuraChatbotEngine)
   engine.py, hub.py     Bộ máy chạy kịch bản, chọn tranh
   generic.py            Hội thoại Socrates có AI cho tranh chưa có kịch bản JSON (lộ trình dựng từ data.py)
+  general.py            Hỏi Aura: hỏi đáp mở + nhận diện tranh từ mô tả (kiểm lại với Kho tranh)
   qa.py                 Trả lời câu hỏi gõ tay dựa trên tư liệu của tranh (RAG) rồi bắc cầu về câu đang hỏi
   llm.py                Gọi LLM (tuỳ chọn), nhiều key / nhiều nhà cung cấp dự phòng
   library.py            Đọc và kiểm tra các file kịch bản
@@ -85,19 +88,24 @@ requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server
 | Đường dẫn | Màn hình |
 |---|---|
 | `/` | Chào mừng / đăng nhập |
-| `/home` | Khám phá (avatar góc phải → Hồ sơ) |
+| `/home` | Khám phá (avatar góc phải → Cài đặt) |
 | `/timeline`, `/concepts`, `/topic/<id>` | Mốc thời gian, Khái niệm, bài đọc chủ đề |
-| `/gallery`, `/saved` | Kho tranh, Đã lưu (biểu tượng dấu trang góc phải Kho tranh) |
+| `/gallery`, `/saved` | Kho tranh: Bộ sưu tập · Đã lưu (công tắc ở đầu trang; `/saved` mở thẳng Đã lưu) |
 | `/painting/<id>` | Tổng quan tranh |
-| `/chat/<id>` | Hỏi Aura |
+| `/chat/<id>` | Trò chuyện về một bức tranh (Socrates) |
+| `/ask` | Hỏi Aura: hỏi đáp mở, nhận diện tranh từ mô tả |
 | `/sources/<id>` | Tư liệu chatbot dùng để trả lời |
 | `/detail/<id>/<chi-tiết>` | Chi tiết tranh |
 | `/quiz/<id>`, `/result/<id>` | Quiz & cảm nhận, Kết quả |
-| `/profile` | Hồ sơ cá nhân |
+| `/settings`, `/profile` | Cài đặt, Thông tin tài khoản |
+| `/about`, `/privacy` | Giới thiệu, Chính sách quyền riêng tư |
 
-Thanh điều hướng nổi (dạng viên thuốc) có 4 nút: **Khám phá**, **Tác phẩm**, **Hỏi Aura**, **Tư liệu**;
-ba nút sau mở bức tranh đang xem (ảnh, tư liệu, câu hỏi nhanh và chatbot luôn theo đúng bức đó).
-Nút tròn ở giữa là **Scan ảnh tác phẩm** (chưa làm, bấm vào hiện thông báo sắp ra mắt).
+Thanh điều hướng nổi (dạng viên thuốc): **Khám phá** · **Kho tranh** · **Scan** · **Hỏi Aura** · **Cài đặt**.
+- Kho tranh gồm Bộ sưu tập và Đã lưu (tranh đã bấm dấu trang, lưu trong trình duyệt).
+- Nút tròn ở giữa là **Scan ảnh tác phẩm** (chưa làm, bấm vào hiện thông báo sắp ra mắt).
+- Hỏi Aura: hỏi về thời Phục Hưng hay bất kỳ bức tranh nào; tả một bức tranh thì AURA đoán tên, bức nào có
+  trong Kho tranh thì hiện thẻ có nút mở thẳng bức đó.
+- Trang của mỗi bức tranh có nút trò chuyện về bức đó và liên kết tới phần Tư liệu.
 Điện thoại: thanh nổi ở cạnh dưới. Máy tính: thanh nằm ở góc trên bên phải.
 Cuộc trò chuyện được cất trong bộ nhớ của trình duyệt nên tải lại trang (F5) vẫn nói tiếp đúng chỗ;
 nút **Bắt đầu lại** trong màn chat xoá để trò chuyện từ đầu, đăng xuất cũng xoá.

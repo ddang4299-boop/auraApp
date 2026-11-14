@@ -27,6 +27,7 @@ from typing import Optional
 
 from aura.data import Painting
 
+from .general import GeneralGuide
 from .generic import FOOTNOTE_RE, PaintingSocratic
 from .library import EXIT_Q
 from aura.socratic import (AuraTurn, Choice, DetailAttachment, Info, Message, ScriptedSocraticEngine,
@@ -101,6 +102,24 @@ class AuraChatbotEngine:
         self._sessions: dict[str, _Session] = {}      # painting.id -> phiên chat
         self._sigs: dict[str, str] = {}               # script_id -> dấu vân tay nội dung kịch bản
         self._generic_engine: Optional[PaintingSocratic] = None
+        self._general: Optional[GeneralGuide] = None
+
+    # ------------------------------------------------------------------ Hỏi Aura (tab chung)
+    async def ask_general(self, text: str, history: list[dict]) -> dict:
+        """Hỏi đáp mở về Phục Hưng / mọi bức tranh, kèm nhận diện tranh trong Kho tranh (Chatbot/general.py)."""
+        return await self._run(self.general.reply, text, history)
+
+    @property
+    def general(self) -> GeneralGuide:
+        if self._general is None:
+            from aura.data import ALL_PAINTINGS
+            from aura.topics import ALL as TOPICS
+            try:
+                llm = self.hub.llm
+            except Exception:
+                llm = None
+            self._general = GeneralGuide(llm, ALL_PAINTINGS, list(TOPICS.values()))
+        return self._general
 
     # ------------------------------------------------------------------ SocraticEngine
     async def start(self, painting: Painting) -> AuraTurn:

@@ -1,4 +1,5 @@
-"""Màn Hỏi Aura — đối thoại Socrates quanh một bức tranh."""
+"""Màn Trò chuyện về tranh — đối thoại Socrates quanh MỘT bức tranh (mở từ trang tranh).
+Hỏi đáp mở về mọi thứ thuộc thời Phục Hưng nằm ở tab Hỏi Aura (screens/ask.py)."""
 from __future__ import annotations
 
 import asyncio
@@ -12,7 +13,7 @@ from ..data import DEFAULT_ID, PAINTINGS, Painting
 from ..socratic import STAGES, AuraTurn, Choice, Info, Message
 from ..theme import (BG, BORDER, GLASS, GLASS_EDGE, GLASS_LINE, INK, MAX_W, MUTED, PRIMARY, SHADOW_INK,
                      SURFACE, TINT, WHITE, WIDE_W, WINE_LIGHT)
-from ..ui import (H, NAV_CHAT, T, V, body, bottom_sheet, cropped_image, glass, icon, logo, nav_bar,
+from ..ui import (H, NAV_PAINTING, T, V, body, bottom_sheet, cropped_image, glass, icon, logo, nav_bar,
                   screen, source_line, surface_field, top_bar, zoom_badge)
 from .viewer import gallery_wall, open_viewer
 
@@ -606,6 +607,6 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
     # Máy tính / màn hình rộng: tranh lớn treo bên trái (phóng to được), cuộc trò chuyện bên phải.
     aside = gallery_wall(app, p) if app.page_width >= WIDE_W else None
     return screen(f"/chat/{p.id}", content,
-                  top=top_bar("Hỏi Aura", on_back=app.back_handler, trailing="info",
+                  top=top_bar("Trò chuyện về tranh", on_back=app.back_handler, trailing="info",
                               on_trailing=lambda e: bottom_sheet(app.page, "AURA hỏi, bạn nhìn", ABOUT)),
-                  footer=footer, nav=nav_bar(app, NAV_CHAT), aside=aside)
+                  footer=footer, nav=nav_bar(app, NAV_PAINTING), aside=aside)

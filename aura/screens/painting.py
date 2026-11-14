@@ -115,5 +115,10 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
         V(17.5),
         primary_button("Bạn tò mò điều gì? Trò chuyện với AURA", lambda e: app.go(f"/chat/{p.id}"),
                        leading="message-circle"),
+        V(12),
+        ft.Container(ft.Row([icon("library", 16, PRIMARY), H(8), T("Xem tư liệu AURA dựa vào", 13, 600, PRIMARY),
+                             H(6), icon("arrow-up-right", 15, PRIMARY)], spacing=0, tight=True,
+                            alignment=ft.MainAxisAlignment.CENTER),
+                     height=40, alignment=ft.Alignment.CENTER, on_click=lambda e: app.go(f"/sources/{p.id}")),
     ], bottom=24.5)
     return screen(f"/painting/{p.id}", content, top=bar, nav=nav_bar(app, NAV_PAINTING))

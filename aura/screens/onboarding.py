@@ -62,38 +62,50 @@ def _ill_chat() -> ft.Control:
         padding=ft.Padding.symmetric(horizontal=14, vertical=12))
 
 
-def _ill_sources() -> ft.Control:
-    card = ft.Container(ft.Column([
-        ft.Row([icon("book-open", 12, PRIMARY), H(5), T("TƯ LIỆU", 8.5, 600, PRIMARY, ls=1.0)], spacing=0),
-        V(4), T("Sfumato", 14, serif=True), V(3),
-        ft.Container(height=5, width=150, bgcolor="#E4DCCD", border_radius=3), V(4),
-        ft.Container(height=5, width=120, bgcolor="#E4DCCD", border_radius=3),
-    ], spacing=0, tight=True), bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=10,
-        padding=ft.Padding.symmetric(horizontal=12, vertical=9), width=200)
-    nav = ft.Container(ft.Row([icon("compass", 14, MUTED), icon("image", 14, MUTED),
+def _ill_ask() -> ft.Control:
+    """Hỏi Aura: tả một bức tranh -> thẻ tranh dẫn thẳng vào Kho tranh; bên dưới là thanh điều hướng mới."""
+    p = PAINTINGS["mona-lisa"]
+    found = ft.Container(ft.Row([
+        ft.Container(cropped_image(p.image, p.aspect, 22, 30, (0, 0, 1, 1), radius=1),
+                     border=ft.Border.all(1.5, "#6B4F3A")),
+        H(8),
+        ft.Column([T("CÓ TRONG KHO TRANH", 7, 600, PRIMARY, ls=0.8), T("Mona Lisa", 12, serif=True)],
+                  spacing=1, tight=True),
+        H(10),
+        ft.Container(T("Xem tranh", 8.5, 600, WHITE), bgcolor=PRIMARY, border_radius=9,
+                     padding=ft.Padding.symmetric(horizontal=8, vertical=3)),
+    ], spacing=0, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=10,
+        padding=ft.Padding.symmetric(horizontal=8, vertical=6))
+
+    def nav_icon(name: str, on: bool = False) -> ft.Control:
+        ic = icon(name, 14, PRIMARY if on else MUTED)
+        return ft.Container(ic, bgcolor="#EEDFC2", border_radius=10,
+                            padding=ft.Padding.symmetric(horizontal=6, vertical=3)) if on else ic
+    nav = ft.Container(ft.Row([nav_icon("compass"), nav_icon("image"),
                                ft.Container(icon("scan-camera", 13, WHITE), width=24, height=24, border_radius=12,
                                             bgcolor=PRIMARY, alignment=ft.Alignment.CENTER),
-                               icon("message-circle", 14, MUTED),
-                               ft.Container(icon("library", 14, PRIMARY), bgcolor="#EEDFC2", border_radius=10,
-                                            padding=ft.Padding.symmetric(horizontal=6, vertical=3))],
+                               nav_icon("message-circle", True), nav_icon("settings")],
                               spacing=12, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                        bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=20,
                        padding=ft.Padding.symmetric(horizontal=12, vertical=5))
-    return ft.Container(ft.Column([card, V(12), nav], spacing=0, tight=True,
-                                  horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        width=ILL_W, height=ILL_H, bgcolor="#F1EADC", border_radius=12,
-                        alignment=ft.Alignment.CENTER)
+    return ft.Container(ft.Column([
+        ft.Row([_bubble("Tranh người phụ nữ cười bí ẩn?", True)], alignment=ft.MainAxisAlignment.END),
+        V(6), found, V(10), nav,
+    ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        width=ILL_W, height=ILL_H, bgcolor="#F1EADC", border_radius=12,
+        padding=ft.Padding.symmetric(horizontal=12, vertical=8), alignment=ft.Alignment.CENTER)
 
 
 STEPS = [
     (_ill_welcome, "Chào mừng đến AURA",
      "Phòng trưng bày tranh Phục Hưng bỏ túi: nhìn chậm, tự cảm nhận, rồi đối chiếu với tư liệu của bảo tàng."),
-    (_ill_gallery, "Dạo phòng trưng bày",
-     "Vào Kho tranh, lọc theo trường phái và chạm một bức để xem toàn cảnh, phóng to từng chi tiết."),
+    (_ill_gallery, "Dạo Kho tranh",
+     "Lọc theo trường phái, chạm một bức để xem kỹ từng chi tiết. Bấm dấu trang để lưu, xem lại ở phần Đã lưu."),
     (_ill_chat, "Trò chuyện kiểu Socrates",
-     "AURA không đưa đáp án ngay mà hỏi để bạn tự quan sát. Bấm gợi ý hoặc gõ tự do, kể cả hỏi ngược lại."),
-    (_ill_sources, "Tra cứu tư liệu",
-     "Mục Tư liệu cho biết AURA dựa vào nguồn nào. Thanh điều hướng phía dưới đưa bạn qua lại giữa các mục."),
+     "Ở mỗi bức tranh, AURA không đưa đáp án ngay mà hỏi để bạn tự quan sát. Bấm gợi ý hoặc gõ tự do."),
+    (_ill_ask, "Hỏi Aura mọi điều",
+     "Hỏi về thời Phục Hưng, hoặc tả một bức tranh: AURA đoán tên và dẫn bạn tới đúng bức trong Kho tranh."),
 ]
 
 

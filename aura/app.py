@@ -23,9 +23,13 @@ PREFS_KEY = "aura.profile"
 # lỡ tải lại trang (F5), máy chủ khởi động lại hay mở lại app thì vẫn nói tiếp được đúng chỗ cũ.
 CHATS_KEY = "aura.chats"
 CHATS_VERSION = 1
-APP_VERSION = "1.0.0"
+ASK_KEY = "aura.ask"                   # cuộc hỏi đáp ở tab "Hỏi Aura"
+SAVED_KEY = "aura.saved"               # tranh đã lưu (dấu trang)
+ASK_KEEP = 60                          # chỉ cất ngần này tin gần nhất của "Hỏi Aura"
+APP_VERSION = "1.1.0"
 
-ROOT_ROUTES = {"/", "/home", "/gallery", "/saved"}
+# Các tab trên thanh điều hướng: mở tab thì giữ sẵn Trang chủ ở đáy stack (xem _show)
+ROOT_ROUTES = {"/", "/home", "/gallery", "/saved", "/ask", "/settings"}
 # Bản web lúc mới mở hay báo bề rộng tạm (vd 164px). Điện thoại thật rộng ít nhất ~320px,
 # nên hẹp hơn TEMP_W thì coi là chưa biết khổ màn hình (xem AuraApp._waiting_width).
 TEMP_W = 300
@@ -52,11 +56,21 @@ class ChatState:
 
 
 @dataclass
+class AskState:
+    """Tab "Hỏi Aura": mỗi tin là một dict JSON được (cất thẳng vào bộ nhớ trình duyệt).
+    {"role": "user"|"aura", "text", "painting", "identified", "topic", "source", "confidence"}"""
+    messages: list[dict] = field(default_factory=list)
+    thinking: bool = False
+
+
+@dataclass
 class AppState:
     profile: Profile | None = None
     saved: set[str] = field(default_factory=set)
     quizzes: dict[str, QuizState] = field(default_factory=dict)
     chats: dict[str, ChatState] = field(default_factory=dict)
+    ask: AskState = field(default_factory=AskState)
+    gallery_tab: str = "all"           # Kho tranh đang mở phần nào: "all" | "saved"
 
     def quiz(self, pid: str) -> QuizState:
         return self.quizzes.setdefault(pid, QuizState())
@@ -80,6 +94,10 @@ ROUTES = [
     ("/concepts", "topics", "concepts"),
     ("/topic/", "topics", "build"),
     ("/sources/", "sources", "build"),
+    ("/ask", "ask", "build"),
+    ("/settings", "settings", "build"),
+    ("/about", "settings", "about"),
+    ("/privacy", "settings", "privacy"),
     ("/", "auth", "welcome"),
 ]
 
@@ -197,6 +215,8 @@ class AuraApp:
             return "/painting/" + path.split("/")[2]
         if path.startswith("/painting/"):
             return "/gallery"
+        if path in ("/profile", "/about", "/privacy"):
+            return "/settings"
         return "/home"
 
     def _build(self, route: str) -> ft.View:
@@ -312,8 +332,9 @@ class AuraApp:
             snack(self.page, "Đã bỏ khỏi mục Đã lưu.")
         else:
             saved.add(pid)
-            snack(self.page, "Đã lưu tranh.")
+            snack(self.page, "Đã lưu tranh. Xem lại trong Kho tranh › Đã lưu.")
         self.touch()
+        self.page.run_task(self._write_pref, SAVED_KEY, json.dumps(sorted(saved)))
         return pid in saved
 
     # ---- tài khoản ----------------------------------------------------------------
@@ -327,6 +348,7 @@ class AuraApp:
         """Đọc lại cuộc trò chuyện đang dở, tự đăng nhập lại nếu đã lưu hồ sơ, rồi mở hướng dẫn cho người mới."""
         try:
             await self._restore_chats()
+            await self._restore_local()
         finally:
             self._chats_ready.set()
         try:
@@ -410,6 +432,35 @@ class AuraApp:
                 st.asked = [str(x) for x in c.get("asked") or []]
             except Exception as e:    # dữ liệu hỏng: bỏ qua, không làm hỏng app
                 print(f"[app] Bỏ cuộc trò chuyện đã lưu của {pid}: {e}")
+
+    async def _restore_local(self) -> None:
+        """Đọc lại tranh đã lưu và cuộc hỏi đáp ở tab "Hỏi Aura" (dữ liệu hỏng thì bỏ qua)."""
+        try:
+            raw = await self.prefs.get(SAVED_KEY)
+            ids = json.loads(raw) if raw else []
+            if isinstance(ids, list) and not self.state.saved:
+                self.state.saved = {i for i in ids if i in PAINTINGS}
+                self.touch()
+                # màn đang hiện đã dựng trước khi đọc xong (vd mở thẳng /saved ở tab mới): vẽ lại cho đúng
+                path = urlsplit(self.page.views[-1].route if self.page.views else "/").path
+                if self.state.saved and (path in ("/gallery", "/saved", "/settings", "/profile")
+                                         or path.startswith("/painting/")):
+                    self.rebuild()
+        except Exception as e:
+            print(f"[app] Bỏ danh sách tranh đã lưu: {e}")
+        try:
+            raw = await self.prefs.get(ASK_KEY)
+            data = json.loads(raw) if raw else None
+            msgs = data.get("messages") if isinstance(data, dict) and data.get("v") == 1 else None
+            if isinstance(msgs, list) and not self.state.ask.messages:
+                self.state.ask.messages = [m for m in msgs if isinstance(m, dict)
+                                           and m.get("role") in ("user", "aura") and isinstance(m.get("text"), str)]
+        except Exception as e:
+            print(f"[app] Bỏ cuộc hỏi đáp đã lưu: {e}")
+
+    def save_ask(self) -> None:
+        msgs = self.state.ask.messages[-ASK_KEEP:]
+        self.page.run_task(self._write_pref, ASK_KEY, json.dumps({"v": 1, "messages": msgs}, ensure_ascii=False))
 
     def reset_chat(self, pid: str) -> None:
         """Bắt đầu lại cuộc trò chuyện của một tranh từ đầu."""
@@ -538,7 +589,8 @@ class AuraApp:
 
     def sign_out(self) -> None:
         async def _do():
-            for key in (PREFS_KEY, CHATS_KEY):     # máy dùng chung: người sau không thấy cuộc trò chuyện cũ
+            # máy dùng chung: người sau không thấy hồ sơ, cuộc trò chuyện, tranh đã lưu của người trước
+            for key in (PREFS_KEY, CHATS_KEY, ASK_KEY, SAVED_KEY):
                 try:
                     await self.prefs.remove(key)
                 except Exception:

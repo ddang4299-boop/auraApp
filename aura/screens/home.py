@@ -129,7 +129,7 @@ def build(app, q) -> ft.View:
         ft.Row([
             logo(36),
             ft.Container(expand=True),
-            avatar(app.profile, 38, on_click=lambda e: app.go("/profile")),
+            avatar(app.profile, 38, on_click=lambda e: app.go("/settings")),
         ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         V(31),
         T("Phục Hưng:\nkhi con người học\ncách nhìn lại thế giới.", 35, serif=True),

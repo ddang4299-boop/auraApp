@@ -9,7 +9,7 @@ import flet as ft
 from ..data import DEFAULT_ID, PAINTINGS
 from ..socratic import Info
 from ..theme import INK, MUTED, PRIMARY, TINT
-from ..ui import (H, NAV_SOURCES, T, V, body, glass, icon, kicker, nav_bar, primary_button, screen,
+from ..ui import (H, NAV_PAINTING, T, V, body, glass, icon, kicker, nav_bar, primary_button, screen,
                   source_line, top_bar)
 
 
@@ -63,4 +63,4 @@ def build(app, q, pid: str = DEFAULT_ID) -> ft.View:
                        leading="message-circle"),
     ], bottom=24)
     return screen(f"/sources/{p.id}", content, top=top_bar("Tư liệu", on_back=app.back_handler),
-                  nav=nav_bar(app, NAV_SOURCES))
+                  nav=nav_bar(app, NAV_PAINTING))

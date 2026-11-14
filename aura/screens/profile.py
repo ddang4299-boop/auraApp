@@ -1,25 +1,13 @@
-"""Màn Hồ sơ: chỉnh sửa thông tin cá nhân, tài khoản liên kết, thông tin app, đăng xuất."""
+"""Màn Thông tin tài khoản (mở từ Cài đặt): chỉnh sửa thông tin cá nhân, tài khoản liên kết.
+Giới thiệu, quyền riêng tư và đăng xuất nằm ở màn Cài đặt (screens/settings.py)."""
 from __future__ import annotations
 
 import flet as ft
 
 from .. import auth
-from ..app import APP_VERSION
-from ..theme import (BEIGE, BORDER, GREEN, GREEN_INK, INK, MUTED, PRIMARY, RADIUS, RED, SURFACE,
-                     TINT, WHITE)
-from ..ui import (H, T, V, avatar, body, NAV_HOME, nav_bar, bottom_sheet, card, divider, icon, kicker,
-                  primary_button, screen, snack, surface_field, top_bar)
-
-ABOUT_APP = ("AURA giúp bạn cảm nhận tranh Phục Hưng bằng cách nhìn chậm và trò chuyện. Thay vì "
-             "đưa đáp án, AURA đặt câu hỏi theo phương pháp Socrates để bạn tự quan sát, tách điều "
-             "nhìn thấy khỏi điều suy đoán, rồi đối chiếu với nguồn của bảo tàng.")
-SOCRATIC = ("Mỗi cuộc trò chuyện đi qua bốn chặng: Ấn tượng đầu → Tách chi tiết → Đối thoại → Mở "
-            "rộng. AURA hỏi trước, gợi ý sau và luôn ghi rõ nguồn khi đưa ra thông tin.")
-SOURCES = ("Thông tin tác phẩm: Bảo tàng Louvre (collections.louvre.fr). Ảnh tranh: Wikimedia "
-           "Commons (phạm vi công cộng). "
-           "Icon: Lucide (ISC). Phông chữ: Inter, Lora, Montserrat (SIL Open Font License).")
-TERMS = ("AURA chỉ dùng thông tin tài khoản (tên, email, số điện thoại, ảnh đại diện) để đăng "
-         "nhập và hiển thị hồ sơ của bạn. Cảm nhận bạn chia sẻ được lưu trên thiết bị này.")
+from ..theme import BORDER, GREEN, GREEN_INK, INK, MUTED, PRIMARY, RADIUS, SURFACE, TINT, WHITE
+from ..ui import (H, T, V, avatar, body, NAV_SETTINGS, nav_bar, card, divider, icon, kicker, primary_button,
+                  screen, snack, surface_field, top_bar)
 
 # "facebook"/"phone": chỉ để hiển thị hồ sơ cũ đã lưu trên máy từ trước khi bỏ hai cách đăng nhập này
 PROVIDER_LABEL = {"google": "Google", "guest": "chế độ khách", "facebook": "Facebook",
@@ -39,15 +27,6 @@ def _field(label: str, value: str, *, hint: str = "", keyboard=None, multiline: 
                        padding=ft.Padding.symmetric(horizontal=14, vertical=14 if multiline else 0),
                        height=None if multiline else 51, alignment=ft.Alignment.CENTER_LEFT)
     return ft.Column([T(label, 13, 500, INK), V(8), box], spacing=0, tight=True), tf
-
-
-def _info_row(title: str, value: str = "", on_click=None, first: bool = False) -> list[ft.Control]:
-    row = ft.Container(ft.Row([
-        T(title, 13, 500, INK, expand=True),
-        T(value, 12, 400, MUTED) if value else icon("arrow-up-right", 18, PRIMARY),
-    ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        padding=ft.Padding.symmetric(vertical=14), on_click=on_click)
-    return ([] if first else [divider()]) + [row]
 
 
 def build(app, q) -> ft.View:
@@ -121,17 +100,6 @@ def build(app, q) -> ft.View:
             padding=ft.Padding.symmetric(vertical=12))
         return ([] if first else [divider()]) + [row]
 
-    def confirm_logout(e=None):
-        page.show_dialog(ft.AlertDialog(
-            bgcolor="#F6F2E8",
-            title=T("Đăng xuất khỏi AURA?", 21, serif=True),
-            content=T("Tranh đã lưu và cuộc trò chuyện trên thiết bị này sẽ được xoá.", 13, 400, MUTED),
-            actions=[
-                ft.TextButton(content=T("Huỷ", 13, 600, MUTED), on_click=lambda e: page.pop_dialog()),
-                ft.TextButton(content=T("Đăng xuất", 13, 600, RED),
-                              on_click=lambda e: (page.pop_dialog(), app.sign_out())),
-            ]))
-
     provider_text = f"Đăng nhập bằng {PROVIDER_LABEL.get(prof.provider, prof.provider)}"
     content = body([
         V(20),
@@ -160,26 +128,9 @@ def build(app, q) -> ft.View:
         V(6),
         card(ft.Column(linked_row("google", True), spacing=0, tight=True),
              padding=ft.Padding.symmetric(horizontal=16)),
-        V(30),
-        kicker("Thông tin ứng dụng"),
-        V(6),
-        card(ft.Column(
-            _info_row("Phiên bản", APP_VERSION, first=True)
-            + _info_row("Về AURA", on_click=lambda e: bottom_sheet(page, "Về AURA", ABOUT_APP))
-            + _info_row("Phương pháp Socrates", on_click=lambda e: bottom_sheet(page, "Phương pháp Socrates",
-                                                                                SOCRATIC))
-            + _info_row("Nguồn ảnh & giấy phép", on_click=lambda e: bottom_sheet(page, "Nguồn & giấy phép",
-                                                                                 SOURCES))
-            + _info_row("Điều khoản & quyền riêng tư", on_click=lambda e: bottom_sheet(
-                page, "Điều khoản & quyền riêng tư", TERMS)),
-            spacing=0, tight=True), padding=ft.Padding.symmetric(horizontal=16)),
-        V(30),
-        ft.Container(ft.Row([icon("log-out", 18, RED), H(8), T("Đăng xuất", 14, 600, RED)], spacing=0,
-                            tight=True, alignment=ft.MainAxisAlignment.CENTER),
-                     height=52, border=ft.Border.all(1, RED), border_radius=RADIUS,
-                     alignment=ft.Alignment.CENTER, on_click=confirm_logout),
-        V(12),
-        T("AURA · Nhìn chậm, hỏi nhiều hơn.", 11, 400, MUTED, align=ft.TextAlign.CENTER),
+        V(16),
+        T("Giới thiệu, quyền riêng tư và đăng xuất nằm ở mục Cài đặt.", 11, 400, MUTED,
+          align=ft.TextAlign.CENTER),
     ], bottom=28)
-    return screen("/profile", content, top=top_bar("Hồ sơ của bạn", on_back=app.back_handler),
-                  nav=nav_bar(app, NAV_HOME))
+    return screen("/profile", content, top=top_bar("Thông tin tài khoản", on_back=app.back_handler),
+                  nav=nav_bar(app, NAV_SETTINGS))

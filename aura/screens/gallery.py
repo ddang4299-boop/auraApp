@@ -17,7 +17,7 @@ import flet as ft
 from ..data import FEATURED, FILTERS, GRID, PAINTINGS, Painting
 from ..theme import (BORDER, GLASS_EDGE, GLASS_STRONG, INK, MAT_BG, MUTED, PRIMARY, SHADOW_INK, SURFACE,
                      TINT)
-from ..ui import (H, NAV_HOME, T, V, body, icon, kicker, nav_bar, primary_button, screen, surface_field,
+from ..ui import (H, NAV_GALLERY, T, V, body, icon, kicker, nav_bar, primary_button, screen, surface_field,
                   top_bar)
 
 FRAME_WOOD = "#6B4F3A"          # nẹp khung tranh: nâu gỗ ấm (cùng họ màu nâu của AURA)
@@ -36,13 +36,17 @@ def bookmark_icon(on: bool, size: float = 20, off_color: str = MUTED) -> ft.Cont
     return icon("bookmark-filled" if on else "bookmark", size, PRIMARY if on else off_color)
 
 
-def _bookmark(app, p: Painting) -> ft.Control:
-    ic = ft.Container(bookmark_icon(p.id in app.state.saved), padding=6)
+def _bookmark(app, p: Painting, on_change=None) -> ft.Control:
+    ic = ft.Container(bookmark_icon(p.id in app.state.saved), padding=6,
+                      tooltip="Lưu / bỏ lưu tác phẩm")
 
     def toggle(e):
         on = app.toggle_saved(p.id)
         ic.content = bookmark_icon(on)
-        ic.update()
+        if on_change is not None:          # vd đang ở phần Đã lưu: bỏ lưu thì tranh rời khỏi danh sách
+            on_change()
+        else:
+            ic.update()
     ic.on_click = toggle
     return ic
 
@@ -90,7 +94,7 @@ def featured_card(app, p: Painting) -> ft.Control:
     ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER), width=FEATURED_W)
 
 
-def exhibit(app, p: Painting, width: float, k: int) -> ft.Control:
+def exhibit(app, p: Painting, width: float, k: int, on_change=None) -> ft.Control:
     """Một tác phẩm trong phòng trưng bày: khung lớn + biển tên kiểu bảo tàng, so le trái/phải."""
     card_w = width * 0.9
     frame = _zoomable(app, framed(p, card_w, 380), p)
@@ -113,7 +117,7 @@ def exhibit(app, p: Painting, width: float, k: int) -> ft.Control:
                          bgcolor=TINT, alignment=ft.Alignment.CENTER,
                          on_click=lambda e: app.page.run_task(_open, app, frame, f"/painting/{p.id}")),
             ft.Container(expand=True),
-            _bookmark(app, p),
+            _bookmark(app, p, on_change),
         ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
     ], spacing=0, tight=True), bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=6,
         padding=ft.Padding.only(left=16, right=10, top=14, bottom=12), width=card_w)
@@ -123,13 +127,41 @@ def exhibit(app, p: Painting, width: float, k: int) -> ft.Control:
     return ft.Row([col], alignment=ft.MainAxisAlignment.START if left else ft.MainAxisAlignment.END)
 
 
-def exhibit_list(app, items: list[Painting], width: float) -> ft.Control:
+def exhibit_list(app, items: list[Painting], width: float, on_change=None) -> ft.Control:
     rows: list[ft.Control] = []
     for k, p in enumerate(items):
         if k:
             rows.append(V(40))             # khoảng thở giữa hai tác phẩm, như trên tường bảo tàng
-        rows.append(exhibit(app, p, width, k))
+        rows.append(exhibit(app, p, width, k, on_change))
     return ft.Column(rows, spacing=0, tight=True)
+
+
+def _segment(tab: str, n_saved: int, on_select) -> ft.Control:
+    """Công tắc hai phần ở đầu Kho tranh: Bộ sưu tập | Đã lưu (kèm số tranh đã lưu)."""
+    def part(key: str, text: str, ic: str) -> ft.Control:
+        on = key == tab
+        return ft.Container(ft.Row([icon(ic, 15, PRIMARY if on else MUTED), H(7),
+                                    T(text, 13, 600 if on else 500, INK if on else MUTED, no_wrap=True)],
+                                   spacing=0, tight=True, alignment=ft.MainAxisAlignment.CENTER),
+                            expand=True, height=38, border_radius=19, alignment=ft.Alignment.CENTER,
+                            bgcolor=SURFACE if on else None,
+                            border=ft.Border.all(1, BORDER) if on else None,
+                            on_click=lambda e: on_select(key))
+    return ft.Container(ft.Row([part("all", "Bộ sưu tập", "image"),
+                                part("saved", f"Đã lưu · {n_saved}", "bookmark")], spacing=4),
+                        padding=4, border_radius=23, bgcolor=TINT)
+
+
+def _saved_empty(app, on_browse) -> ft.Control:
+    return ft.Container(ft.Column([
+        icon("bookmark", 32, MUTED), V(12),
+        T("Chưa có tranh nào được lưu.", 14, 600, INK), V(6),
+        T("Chạm biểu tượng dấu trang trên một bức tranh để lưu lại và xem sau.", 13, 400, MUTED,
+          align=ft.TextAlign.CENTER),
+        V(20), primary_button("Xem bộ sưu tập", lambda e: on_browse(), pill=True, height=44),
+    ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        padding=ft.Padding.symmetric(vertical=40, horizontal=12),
+        bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=8)
 
 
 def _tabs(selected: str, on_select) -> ft.Row:
@@ -145,8 +177,12 @@ def _tabs(selected: str, on_select) -> ft.Row:
     return ft.Row(tabs, spacing=22, scroll=ft.ScrollMode.AUTO)
 
 
-def build(app, q) -> ft.View:
-    state = {"filter": q.get("filter", "Tất cả"), "query": ""}
+def build(app, q, tab: str | None = None) -> ft.View:
+    """Kho tranh gồm hai phần: Bộ sưu tập (mọi tác phẩm, có tìm kiếm và tab lọc) và Đã lưu (tranh đã bấm dấu
+    trang). Đổi phần ngay trên màn, không mở màn mới; /saved mở thẳng phần Đã lưu."""
+    tab = tab or ("saved" if q.get("tab") == "saved" else app.state.gallery_tab)
+    app.state.gallery_tab = tab
+    state = {"filter": q.get("filter", "Tất cả"), "query": "", "tab": tab}
     cw = app.content_width
     tabs_holder = ft.Container()
     featured_row = ft.Row(spacing=0, scroll=ft.ScrollMode.AUTO,
@@ -156,6 +192,11 @@ def build(app, q) -> ft.View:
     list_holder = ft.Container()
     count = T("", 11, 400, MUTED)
     empty = T("", 13, 400, MUTED)
+    seg_holder = ft.Container()
+    saved_box = ft.Container()
+    head_kicker = kicker("", ls=1.2)
+    head_title = T("", 29, serif=True)
+    head_sub = T("", 14, 400, MUTED)
 
     def visible() -> list[Painting]:
         f, qq = state["filter"], _norm(state["query"])
@@ -168,20 +209,42 @@ def build(app, q) -> ft.View:
             out.append(p)
         return out
 
+    def render_saved() -> None:
+        items = [PAINTINGS[i] for i in PAINTINGS if i in app.state.saved]
+        saved_box.content = (exhibit_list(app, items, cw, on_change=lambda: refresh()) if items
+                             else _saved_empty(app, lambda: switch("all")))
+
     def refresh(update: bool = True):
-        items = visible()
-        tabs_holder.content = _tabs(state["filter"], select)
-        feats = [p for p in FEATURED if p in items]
-        cards: list[ft.Control] = [H(24)]
-        for p in feats:
-            cards += [featured_card(app, p), H(28)]
-        featured_row.controls = cards
-        featured_box.visible = bool(feats) and state["filter"] == "Tất cả" and not state["query"]
-        list_holder.content = exhibit_list(app, items, cw)
-        count.value = f"{len(items)} tác phẩm"
-        empty.value = "" if items else "Không tìm thấy tranh phù hợp. Thử từ khoá hoặc tab khác nhé."
+        is_all = state["tab"] == "all"
+        n = len(app.state.saved)
+        seg_holder.content = _segment(state["tab"], n, switch)
+        head_kicker.value = ("Phòng trưng bày AURA" if is_all else "Đã lưu").upper()
+        head_title.value = "Dừng lại trước một bức tranh." if is_all else "Những bức tranh bạn muốn quay lại."
+        head_sub.value = ("Những góc nhìn Phục Hưng, từ quen thuộc đến ít được biết." if is_all
+                          else (f"{n} tác phẩm đã lưu" if n else "Lưu một bức tranh để xem lại sau."))
+        all_head.visible = all_list.visible = is_all
+        saved_box.visible = not is_all
+        if is_all:
+            items = visible()
+            tabs_holder.content = _tabs(state["filter"], select)
+            feats = [p for p in FEATURED if p in items]
+            cards: list[ft.Control] = [H(24)]
+            for p in feats:
+                cards += [featured_card(app, p), H(28)]
+            featured_row.controls = cards
+            featured_box.visible = bool(feats) and state["filter"] == "Tất cả" and not state["query"]
+            list_holder.content = exhibit_list(app, items, cw)
+            count.value = f"{len(items)} tác phẩm"
+            empty.value = "" if items else "Không tìm thấy tranh phù hợp. Thử từ khoá hoặc tab khác nhé."
+        else:
+            featured_box.visible = False
+            render_saved()
         if update:
             app.page.update()
+
+    def switch(t: str):
+        state["tab"] = app.state.gallery_tab = t
+        refresh()
 
     def select(f: str):
         state["filter"] = f
@@ -202,28 +265,15 @@ def build(app, q) -> ft.View:
         padding=ft.Padding.only(left=19, right=16))
 
     featured_box.controls = [
-        T("Tranh nổi bật", 23, serif=True),
+        ft.Container(T("Tranh nổi bật", 23, serif=True), padding=ft.Padding.symmetric(horizontal=24)),
         V(18),
         ft.Container(featured_row, data="bleed"),
         V(36),
     ]
-    featured_box.data = "bleed"
-    # featured_box chứa một hàng tràn hết chiều ngang: tự căn lề cho phần tiêu đề
-    featured_box.controls[0] = ft.Container(featured_box.controls[0], padding=ft.Padding.symmetric(horizontal=24))
-    refresh(update=False)
-    content = body([
-        V(22),
-        kicker("Phòng trưng bày AURA", ls=1.2),
-        V(8),
-        T("Dừng lại trước một bức tranh.", 29, serif=True),
-        V(10),
-        T("Những góc nhìn Phục Hưng, từ quen thuộc đến ít được biết.", 14, 400, MUTED),
-        V(18),
-        search,
-        V(16),
-        tabs_holder,
-        V(26),
-        featured_box,
+    featured_box.data = "bleed"            # hàng tranh trượt ngang tràn hết chiều ngang màn hình
+    all_head = ft.Column([search, V(16), tabs_holder, V(26)], spacing=0, tight=True,
+                         horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+    all_list = ft.Column([
         ft.Row([T("Phòng trưng bày", 23, serif=True, expand=True), count],
                vertical_alignment=ft.CrossAxisAlignment.CENTER),
         V(22),
@@ -231,34 +281,29 @@ def build(app, q) -> ft.View:
         empty,
         V(24),
         T("Ảnh: Wikimedia Commons (tranh thuộc phạm vi công cộng)", 11, 400, MUTED),
+    ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+    refresh(update=False)
+    content = body([
+        V(22),
+        head_kicker,
+        V(8),
+        head_title,
+        V(10),
+        head_sub,
+        V(18),
+        seg_holder,
+        V(20),
+        all_head,
+        featured_box,
+        all_list,
+        saved_box,
     ], bottom=25)
-    return screen("/gallery", content, top=top_bar("Kho tranh", on_back=app.back_handler, trailing="bookmark",
-                                                    on_trailing=lambda e: app.go("/saved")),
-                  nav=nav_bar(app, NAV_HOME))
+    route = "/saved" if tab == "saved" else "/gallery"
+    return screen(route, content, top=top_bar("Kho tranh", on_back=app.back_handler, trailing="bookmark",
+                                               on_trailing=lambda e: switch("saved")),
+                  nav=nav_bar(app, NAV_GALLERY))
 
 
 def saved(app, q) -> ft.View:
-    items = [PAINTINGS[i] for i in PAINTINGS if i in app.state.saved]
-    cw = app.content_width
-    if items:
-        main: list[ft.Control] = [exhibit_list(app, items, cw)]
-    else:
-        main = [ft.Container(ft.Column([
-            icon("bookmark", 32, MUTED), V(12),
-            T("Chưa có tranh nào được lưu.", 14, 600, INK), V(6),
-            T("Chạm biểu tượng dấu trang trên một bức tranh để lưu lại và xem sau.", 13, 400, MUTED,
-              align=ft.TextAlign.CENTER),
-            V(20), primary_button("Vào kho tranh", lambda e: app.go("/gallery"), pill=True, height=44),
-        ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.Padding.symmetric(vertical=40, horizontal=12),
-            bgcolor=SURFACE, border=ft.Border.all(1, BORDER), border_radius=8)]
-    content = body([
-        V(22),
-        T("Những bức tranh bạn muốn quay lại.", 29, serif=True),
-        V(10.5),
-        T(f"{len(items)} tác phẩm đã lưu", 14, 400, MUTED),
-        V(24),
-        *main,
-    ], bottom=25)
-    return screen("/saved", content, top=top_bar("Đã lưu", on_back=app.back_handler),
-                  nav=nav_bar(app, NAV_HOME))
+    """/saved (vd từ Cài đặt › Đã lưu): Kho tranh mở sẵn phần Đã lưu."""
+    return build(app, q, tab="saved")

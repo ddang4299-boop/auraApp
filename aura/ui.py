@@ -259,32 +259,37 @@ def top_bar(title: str, *, on_back: Handler = None, leading: str = "arrow-left",
     )
 
 
-# Thứ tự nút trên thanh điều hướng (dùng làm tham số `active` của nav_bar)
-NAV_HOME, NAV_PAINTING, NAV_CHAT, NAV_SOURCES = range(4)
+# Các mục trên thanh điều hướng (tham số `active` của nav_bar). Nút Scan ở giữa không phải một mục.
+NAV_HOME, NAV_GALLERY, NAV_ASK, NAV_SETTINGS = range(4)
+# Màn của một bức tranh (tổng quan, chi tiết, trò chuyện, tư liệu, quiz...) thuộc mục Kho tranh
+NAV_PAINTING = NAV_GALLERY
 
-
-def nav_items(pid: str) -> list[tuple[str, str, str]]:
-    """(icon, nhãn, đường dẫn) của 4 chức năng chính. Ba nút sau mở đúng bức tranh đang xem."""
-    return [("compass", "Khám phá", "/home"),
-            ("image", "Tác phẩm", f"/painting/{pid}"),
-            ("message-circle", "Hỏi Aura", f"/chat/{pid}"),
-            ("library", "Tư liệu", f"/sources/{pid}")]
+NAV_ITEMS = [("compass", "Khám phá", "/home"),
+             ("image", "Kho tranh", "/gallery"),
+             ("message-circle", "Hỏi Aura", "/ask"),
+             ("settings", "Cài đặt", "/settings")]
 
 
 def nav_bar(app, active: int) -> ft.Container:
-    """Thanh điều hướng nổi dạng viên thuốc (bo tròn hẳn hai đầu): icon nét mảnh + nhãn nhỏ.
+    """Thanh điều hướng nổi dạng viên thuốc (bo tròn hẳn hai đầu): Khám phá · Kho tranh · [Scan] ·
+    Hỏi Aura · Cài đặt, icon nét mảnh + nhãn nhỏ.
 
     Điện thoại: nổi ở cạnh dưới, nội dung cuộn bên dưới thanh. Máy tính: gọn ở góc trên (xem screen).
     Chỉ dùng nền màu đặc và một lớp bóng tĩnh: KHÔNG làm mờ nền (blur), không có hiệu ứng chạy liên
     tục, nên nhẹ cho điện thoại yếu và cho máy chủ miễn phí."""
     items = []
-    pad = 12 if app.page_width >= 400 else (9 if app.page_width >= 350 else 6)   # điện thoại hẹp: thu lề
-    for i, (ic, label, route) in enumerate(nav_items(app.current_pid)):
+    w = app.page_width
+    # điện thoại hẹp (320-360px): chữ nhỏ hơn một chút, bỏ khe giữa các mục, và chừa lề hai đầu thanh
+    # rộng hơn để chữ "Khám phá" / "Cài đặt" không lấn vào phần bo tròn
+    narrow = w < 360
+    pad = 12 if w >= 400 else (9 if w >= 370 else 7)
+    label_size = 9.5 if narrow else 10
+    for i, (ic, label, route) in enumerate(NAV_ITEMS):
         on = i == active
         color = PRIMARY if on else MUTED
         items.append(ft.Container(
             ft.Column([icon(ic, 20, color), V(3),
-                       T(label, 10, 600 if on else 500, color, lh=1.1, no_wrap=True)],
+                       T(label, label_size, 600 if on else 500, color, lh=1.1, no_wrap=True)],
                       spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             height=NAV_PILL_H - 10, border_radius=(NAV_PILL_H - 10) / 2,
             padding=ft.Padding.symmetric(horizontal=pad), alignment=ft.Alignment.CENTER,
@@ -296,8 +301,9 @@ def nav_bar(app, active: int) -> ft.Container:
                                  tooltip="Scan ảnh tác phẩm (sắp ra mắt)",
                                  on_click=lambda e: scan_soon(app.page)))
     return ft.Container(
-        ft.Row(items, spacing=2, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        height=NAV_PILL_H, padding=4, bgcolor=NAV_BG, border_radius=NAV_PILL_H / 2,
+        ft.Row(items, spacing=0 if narrow else 2, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        height=NAV_PILL_H, padding=ft.Padding.symmetric(horizontal=10 if narrow else 4, vertical=4),
+        bgcolor=NAV_BG, border_radius=NAV_PILL_H / 2,
         border=ft.Border.all(1, BORDER),
         shadow=[ft.BoxShadow(blur_radius=16, spread_radius=-4, offset=ft.Offset(0, 6),
                              color=f"{SHADOW_INK},0.16")])
