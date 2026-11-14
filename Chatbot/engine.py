@@ -55,16 +55,15 @@ REQUEST_RE = re.compile(r"muốn biết|muốn tìm hiểu|muốn khám phá v�
 # Câu có dấu "?" nhưng thật ra là ý kiến của người dùng (vd "Mình nghĩ cô ấy đang buồn?")
 HEDGE_RE = re.compile(r"có lẽ|có thể là|chắc là|hình như|theo (mình|tôi|em|tớ)|"
                       r"(mình|tôi|em|tớ|tui) (nghĩ|thấy|đoán|cảm thấy|cho là)", re.I)
-LIMIT_MSG = ("Câu này nằm ngoài phần tư liệu mình có về bức tranh, nên mình xin không đoán. "
-             "Mình cùng quay lại câu hỏi đang dở nhé.")
-OFFTOPIC_MSG = "Mình hiểu rồi. Mình cùng quay lại câu hỏi đang dở nhé."
-BUSY_MSG = ("Câu này mình cần tra kỹ hơn, mà lúc này kết nối AI đang chậm, bạn hỏi lại sau ít phút nhé. "
-            "Trong lúc chờ, mình cùng quay lại câu hỏi đang dở.")
+# Không dùng câu rập khuôn kiểu "Mình hiểu rồi. Mình cùng quay lại câu hỏi đang dở nhé": khi phải hỏi lại câu
+# đang dở, _pack tự hỏi lại bằng lời dẫn khác (REASK) thay vì chép nguyên văn câu cũ.
+LIMIT_MSG = "Câu này chưa có trong tư liệu mình có về bức tranh, nên mình xin không đoán."
+OFFTOPIC_MSG = "Ý đó thú vị, nhưng mình xin giữ cuộc trò chuyện quanh bức tranh nhé."
+BUSY_MSG = "Câu này mình cần tra kỹ hơn, mà lúc này kết nối AI đang chậm, bạn hỏi lại sau ít phút nhé."
+REASK = ["Nhìn lại bức tranh thêm một chút nhé: ", "Thử quay về với bức tranh: ", "Mình hỏi theo cách khác nhé: ",
+         "Còn trong tranh thì sao: "]
 # Hỏi đáp (xem qa.py): lời dẫn theo nguồn của câu trả lời, và theo việc có "lái" sang hướng mới không
-QA_LEAD = {"notes": "Mình tra trong tư liệu về bức tranh và tìm được điều này.",
-           "general": "Câu này nằm ngoài tư liệu của bức tranh, mình trả lời theo hiểu biết chung nhé."}
 QA_TOPIC = {"notes": "Trả lời từ tư liệu của tranh", "general": "Ngoài tư liệu của bức tranh"}
-QA_STAY = "Xem xong, mình cùng quay lại câu hỏi đang dở nhé."
 OFFTOPIC_LEAD = "Câu hỏi thú vị đấy! Có điều nó nằm ngoài bức tranh, nên mình xin phép không đi theo hướng này."
 QA_STEER = "Câu hỏi của bạn khá gần với hướng “{label}”, mình cùng đi tiếp theo hướng đó nhé."
 BRIDGE_Q = "Điều vừa đọc gợi cho bạn thêm suy nghĩ gì về những gì bạn đã quan sát?"
@@ -252,10 +251,10 @@ class Engine:
             # ở câu chào mà hỏi / xin thông tin cụ thể (vd "cô ấy làm công việc gì á"): trả lời thẳng rồi vào Q1
             res = self.qa.ask(text, None, [], self.llm, qtext=qn.get("text", ""), priority=self._prio(curated))
             if res and res.answer:
-                cards, keep = self._qa_cards(res, curated)
+                lead, cards, keep = self._qa_reply(res, curated)
                 self._unmark(s, contexts, shown_before, keep)
                 s["node"] = self._resolve(s, node["after"], node, sig)
-                return self._pack(s, QA_LEAD[res.source], cards, sig=sig)
+                return self._pack(s, lead, cards, sig=sig)
         if node["id"] == "OPENING" and (not sig["answers_current"] or plain_question):
             ack = "" if contexts else (f"Đây là bức {self.title} của {self.artist}. Mình sẽ kể thêm khi bạn "
                                        "cần; trước hết, mình cùng nhìn tranh một chút nhé.")
@@ -265,7 +264,9 @@ class Engine:
         # ---- user hỏi ngược / nói chuyện khác, chưa trả lời câu hiện tại: KHÔNG coi là câu trả lời ----
         if not sig["answers_current"] and not opt:
             asked = bool(sig["asks_unknown"] or QUESTION_RE.search(low) or contexts)
-            if asked and (not curated or direct_qa):
+            # Có AI và người xem gõ tay: kể cả câu nói không trả lời đúng câu hỏi (vd "mình thích màu xanh")
+            # cũng để AI bàn thẳng vào ý đó rồi bắc cầu, thay vì đáp một câu viết sẵn.
+            if (asked or direct_qa) and (not curated or direct_qa):
                 # Không có mục tư liệu khớp chắc theo luật từ khoá của nhóm: tra cứu toàn bộ ghi chú (RAG)
                 # để trả lời, rồi lái theo gợi ý trả lời mà câu hỏi nghiêng về (nếu có).
                 packed = self._answer_question(s, node, qn, text, sig, contexts, shown_before, curated)
@@ -307,12 +308,11 @@ class Engine:
                 return None
             self._rotate(s, node)
             return self._pack(s, BUSY_MSG, [], sig=sig)
-        cards, keep = self._qa_cards(res, curated)
+        lead, cards, keep = self._qa_reply(res, curated)
         self._unmark(s, contexts, shown_before, keep)
         if res.offtopic:                   # lạc đề hẳn: từ chối nhẹ, rồi câu hỏi gợi mở kéo về lại bức tranh
             self._rotate(s, node)
             return self._pack(s, OFFTOPIC_LEAD, [], sig=sig, ask_text=res.followup)
-        lead = QA_LEAD[res.source]
         steer = next((o for o in options if o["id"] == res.option_id), None) if is_q else None
         if steer and (steer.get("next") or {}).get("type") != "end":
             # câu hỏi nghiêng về một gợi ý trả lời: coi như chọn gợi ý đó và đi tiếp theo hướng ấy
@@ -323,17 +323,34 @@ class Engine:
             if new_node["type"] == "end":
                 return self._finish(s, res.answer)
             s["node"] = new_node
-            return self._pack(s, f"{lead} {QA_STEER.format(label=steer['label'])}", cards, sig=sig)
+            return self._pack(s, f"{lead} {QA_STEER.format(label=steer['label'])}".strip(), cards, sig=sig)
         self._rotate(s, node)
-        if res.followup:
-            # AI hỏi lại theo kiểu Socrates, nối từ điều họ vừa hỏi sang đúng ý câu đang dở (gợi ý trả lời vẫn hợp)
-            return self._pack(s, lead, cards, sig=sig, ask_text=res.followup)
-        return self._pack(s, f"{lead} {QA_STAY}", cards, sig=sig)
+        # AI hỏi lại theo kiểu Socrates, nối từ điều họ vừa hỏi sang đúng ý câu đang dở (gợi ý trả lời vẫn hợp);
+        # không có thì _pack tự hỏi lại câu đang dở bằng lời dẫn khác
+        return self._pack(s, lead, cards, sig=sig, ask_text=res.followup)
+
+    @staticmethod
+    def _reask(s: dict, text: str) -> str:
+        k = s.get("reask_i", 0)
+        s["reask_i"] = k + 1
+        core = [x for x in re.split(r"(?<=[.!?])\s+", text.strip()) if x.strip().endswith("?")]
+        return REASK[k % len(REASK)] + (core[-1].strip() if core else text.strip())
 
     def _prio(self, curated) -> list:
         """Mục tư liệu khớp từ khoá, kèm điều kiện hiện của nhóm ("when") để AI xét có đúng loại câu hỏi không."""
         return [{"id": c["code"], "topic": c["topic"], "content": c["content"],
                  "when": (self.contexts.get(c["code"]) or {}).get("trigger_condition", "")} for c in curated]
+
+    @staticmethod
+    def _qa_reply(res, curated) -> tuple:
+        """(lời nói, thẻ, mã tư liệu dùng) cho một câu trả lời của AI:
+        - khớp mục tư liệu của nhóm: hiện nguyên văn mục đó (thẻ), không cần lời đệm;
+        - kiến thức ngoài tư liệu: thẻ ghi rõ "AI trả lời · kiến thức chung";
+        - còn lại (dựa trên tư liệu): AURA nói thẳng câu trả lời như lời trò chuyện, không thêm thẻ."""
+        cards, keep = Engine._qa_cards(res, curated)
+        if keep or res.source == "general":
+            return "", cards, keep
+        return res.answer, [], None
 
     @staticmethod
     def _qa_cards(res, curated) -> tuple:
@@ -470,6 +487,10 @@ class Engine:
         qn = self._view(node)
         if node["type"] == "question":
             s["stage_idx"] = max(0, min(3, int(self.q[node["id"]][1][-1]) - 1))
+        key = self._key(node)
+        if not ask_text and s.get("last_asked") == key and qn.get("text"):
+            ask_text = self._reask(s, qn["text"])       # hỏi lại câu đang dở: đổi lời dẫn, không chép nguyên văn
+        s["last_asked"] = key
         shown = ask_text or qn["text"]
         question = {
             "id": node["id"], "text": shown, "input_type": "free_text", "allow_free_input": True,

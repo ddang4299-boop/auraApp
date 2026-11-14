@@ -101,6 +101,21 @@ class QAResult:
     curated_id: Optional[str] = None  # mục tư liệu của nhóm trả lời đúng ý câu hỏi: hiện nguyên văn mục đó
 
 
+# Chữ Trung / Nhật / Hàn: model miễn phí đôi khi chen vào giữa câu tiếng Việt -> coi như hỏng, gọi lại
+CJK_RE = re.compile("[" + "\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef" + "]")
+
+
+def ask_vi(llm, system: str, user: str, max_tokens: int) -> str:
+    """Gọi AI; câu trả lời lẫn chữ Trung/Nhật/Hàn thì gọi lại một lần, nhắc chỉ viết tiếng Việt."""
+    raw = llm(system, user, max_tokens) or ""
+    if CJK_RE.search(raw):
+        raw = llm(system + "\nNHẮC LẠI: chỉ viết tiếng Việt, tuyệt đối không dùng chữ Trung, Nhật, Hàn.",
+                  user, max_tokens) or ""
+        if CJK_RE.search(raw):
+            raise ValueError("AI trả lời lẫn chữ không phải tiếng Việt")
+    return raw
+
+
 def _words(s: str) -> list:
     return re.findall(r"\w+", s.lower())
 
@@ -192,8 +207,8 @@ class ScriptQA:
                        "curated": [{"id": p["id"], "when": p.get("when", ""), "topic": p["topic"],
                                     "text": p["content"]} for p in priority]}
             try:
-                raw = llm(QA_SYSTEM.format(title=self.title, artist=self.artist),
-                          json.dumps(payload, ensure_ascii=False), 300)
+                raw = ask_vi(llm, QA_SYSTEM.format(title=self.title, artist=self.artist),
+                             json.dumps(payload, ensure_ascii=False), 300)
                 data = json.loads(re.search(r"\{.*\}", raw or "", re.S).group(0))
                 ans = re.sub(r"\s+", " ", str(data.get("answer") or "")).strip()
                 src = str(data.get("source") or "general")
@@ -283,8 +298,8 @@ class ScriptQA:
             return ""
         if re.search(r"(phải|đúng|chứ|không|ko|chưa)\s*\?$", f, re.I):
             return ""             # câu hỏi có/không: không gợi mở, dùng lại câu hỏi gốc
-        if re.search(r"\bcó muốn\b|\bmuốn tìm hiểu\b|\bcó .{0,40}\bkhông\b| hay (?!là\b)", f, re.I):
-            return ""             # "bạn có muốn tìm hiểu ... hay ...?": mời chọn chủ đề / liệt kê sẵn, không gợi mở
+        if re.search(r"\bcó muốn\b|\bmuốn tìm hiểu\b|\bcó .{0,40}\bkhông\b", f, re.I):
+            return ""             # "bạn có muốn tìm hiểu ...?": mời chọn chủ đề, không gợi mở
         return f[0].upper() + f[1:]
 
     @staticmethod
@@ -311,4 +326,4 @@ class ScriptQA:
         parts = [p.strip() for p in re.split(r"(?<=[.;:])\s+|:\s+", note) if len(p.strip()) > 12]
         best = max(parts or [note], key=lambda p: len(q_uni & _terms(p)[0]))
         best = best.rstrip(".;: ")
-        return f"Theo ghi chú của mình: {best[0].lower() + best[1:]}."
+        return f"Theo tư liệu của mình: {best}."       # giữ chữ hoa đầu câu (có thể là tên riêng: Leonardo...)

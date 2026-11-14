@@ -27,6 +27,7 @@ from typing import Optional
 
 from aura.data import Painting
 
+from .generic import FOOTNOTE_RE, PaintingSocratic
 from .library import EXIT_Q
 from aura.socratic import (AuraTurn, Choice, DetailAttachment, Info, Message, ScriptedSocraticEngine,
                            SocraticEngine, Summary)
@@ -35,7 +36,7 @@ from aura.socratic import (AuraTurn, Choice, DetailAttachment, Info, Message, Sc
 # (result["feedback"]: lời viết sẵn cho từng lựa chọn trong kịch bản, hoặc lời AI viết).
 ANSWER_ACKS = [
     "Cảm ơn bạn đã chia sẻ.",
-    "Mình hiểu rồi.",
+    "Cảm nhận đó rất đáng để nhìn tiếp.",
     "Mình ghi nhận cảm nhận đó của bạn.",
     "Cảm ơn bạn, mình cùng nhìn tiếp nhé.",
     "Mình hiểu cảm nhận của bạn.",
@@ -58,6 +59,9 @@ class _Session:
     last_branch: Optional[str] = None               # nhánh đã đính kèm ảnh gần nhất
     replies: int = 0                                # số lượt người dùng đã gửi
     ack_i: int = 0                                  # xoay vòng câu đệm để không lặp
+
+
+GENERIC = "generic"     # script_id của phiên chạy bằng engine chung (tranh chưa có kịch bản JSON)
 
 
 def summary_text(a: dict) -> str:
@@ -96,13 +100,16 @@ class AuraChatbotEngine:
         self.fallback = fallback or ScriptedSocraticEngine()
         self._sessions: dict[str, _Session] = {}      # painting.id -> phiên chat
         self._sigs: dict[str, str] = {}               # script_id -> dấu vân tay nội dung kịch bản
+        self._generic_engine: Optional[PaintingSocratic] = None
 
     # ------------------------------------------------------------------ SocraticEngine
     async def start(self, painting: Painting) -> AuraTurn:
         script_id = self._script_for(painting)
         if not script_id:
-            self._sessions.pop(painting.id, None)
-            return await self.fallback.start(painting)
+            # tranh chưa có kịch bản riêng: lộ trình chung dựng từ dữ liệu tranh, có AI thì trả lời 3 bước
+            desc, state = self.generic.start(painting)
+            self._sessions[painting.id] = _Session(GENERIC, state)
+            return self._generic_turn(painting, desc)
         r = await self._run(self.hub.start, script_id)
         session = _Session(script_id, r["state"])
         self._sessions[painting.id] = session
@@ -111,10 +118,12 @@ class AuraChatbotEngine:
     async def reply(self, painting: Painting, history: list[Message], user_text: str) -> AuraTurn:
         session = self._sessions.get(painting.id)
         if session is None:
-            if not self._script_for(painting):
-                return await self.fallback.reply(painting, history, user_text)
             await self.start(painting)                # phiên bị mất (vd app khởi động lại)
             session = self._sessions[painting.id]
+        if session.script_id == GENERIC:
+            desc, session.state = await self._run(self.generic.reply, painting, session.state, user_text)
+            session.replies += 1
+            return self._generic_turn(painting, desc)
         user_input = self._as_input(session, user_text)
         # Đang ở menu chọn hướng (Q2.F, danh sách chi tiết...) thì câu trả lời là chọn hướng, không phải cảm nhận
         at_menu = (session.state.get("node") or {}).get("id") in (EXIT_Q, "BRANCH_LIST", "BRIDGE")
@@ -122,7 +131,8 @@ class AuraChatbotEngine:
                              for c in session.chips)
         r = await self._run(self.hub.step, session.state, user_input)
         session.replies += 1
-        return self._to_turn(painting, session, r, ack=self._ack(session, r, nav))
+        typed = isinstance(user_input, str)          # gõ tự do (không phải bấm nút gợi ý)
+        return self._to_turn(painting, session, r, ack=self._ack(session, r, nav, typed))
 
     # ------------------------------------------------------------------ lưu / đọc lại phiên
     def export_session(self, painting_id: str) -> Optional[dict]:
@@ -130,7 +140,8 @@ class AuraChatbotEngine:
         s = self._sessions.get(painting_id)
         if s is None:
             return None
-        return {"script": s.script_id, "sig": self._sig(s.script_id), "state": s.state, "chips": s.chips,
+        sig = self._generic_sig(painting_id) if s.script_id == GENERIC else self._sig(s.script_id)
+        return {"script": s.script_id, "sig": sig, "state": s.state, "chips": s.chips,
                 "last_branch": s.last_branch, "replies": s.replies, "ack_i": s.ack_i}
 
     def import_session(self, painting: Painting, data: Optional[dict]) -> bool:
@@ -139,7 +150,12 @@ class AuraChatbotEngine:
         if not isinstance(data, dict) or not isinstance(data.get("state"), dict):
             return False
         script_id = self._script_for(painting)
-        if not script_id or data.get("script") != script_id or data.get("sig") != self._sig(script_id):
+        if not script_id:
+            script_id = GENERIC
+            ok = data.get("script") == GENERIC and data.get("sig") == PaintingSocratic.signature(painting)
+        else:
+            ok = data.get("script") == script_id and data.get("sig") == self._sig(script_id)
+        if not ok:
             return False
         self._sessions[painting.id] = _Session(script_id, data["state"], list(data.get("chips") or []),
                                                data.get("last_branch"), int(data.get("replies") or 0),
@@ -154,10 +170,65 @@ class AuraChatbotEngine:
         """Kho tư liệu chatbot dựa vào để trả lời (các thẻ context của kịch bản), cho màn Tư liệu."""
         script_id = self._script_for(painting)
         if not script_id:
-            return []
+            # tranh chưa có kịch bản: tư liệu chính là phần giới thiệu đã biên soạn trong aura/data.py
+            p = painting
+            clean = lambda s: FOOTNOTE_RE.sub("", s or "").strip()      # noqa: E731 (bỏ dấu chú thích "[1]")
+            cards = [Info("Bức tranh vẽ gì", clean(p.seeing)), Info("Chuyện phía sau", clean(p.story)),
+                     Info(p.word[0].replace("Một từ mới: ", "Từ mới: "), clean(p.word[1]))]
+            cards += [Info(f"Chi tiết: {d.title}", clean(f"{d.location} {d.note}")) for d in p.details.values()]
+            return [c for c in cards if c.text]
         items = self.hub.engine(script_id).contexts
         return [Info(c.get("topic") or code, c.get("content") or "") for code, c in items.items()
                 if c.get("content")]
+
+    @property
+    def generic(self) -> PaintingSocratic:
+        """Engine chung cho tranh chưa có kịch bản; dùng chung AI (và bộ ngắt mạch) với Hub."""
+        if self._generic_engine is None:
+            try:
+                llm = self.hub.llm
+            except Exception:
+                llm = None
+            self._generic_engine = PaintingSocratic(llm)
+        return self._generic_engine
+
+    @staticmethod
+    def _generic_sig(painting_id: str) -> str:
+        from aura.data import PAINTINGS
+        p = PAINTINGS.get(painting_id)
+        return PaintingSocratic.signature(p) if p else ""
+
+    @staticmethod
+    def _generic_turn(painting: Painting, desc: dict) -> AuraTurn:
+        """Đổi mô tả lượt của engine chung sang AuraTurn cho màn chat."""
+        p = painting
+        paragraphs: list[str] = []
+        infos: list[Info] = []
+        if desc["end"]:
+            if desc["lead"]:
+                paragraphs.append(desc["lead"])
+            paragraphs.append(CLOSING_FALLBACK)
+            return AuraTurn(paragraphs, stage=3, done=True,
+                            summary=Summary("Bạn vừa khám phá",
+                                            f"Bạn đã nhìn chậm “{p.title}” của {p.artist}: tách điều thấy khỏi "
+                                            "điều đoán, rồi đối chiếu với tư liệu của bảo tàng.",
+                                            action="Làm quiz nhỏ" if p.quiz else "Chia sẻ cảm nhận"),
+                            source=f"Nguồn: {p.museum} · Xem nguồn ↗")
+        if desc["lead"]:
+            if desc["general"]:          # ngoài tư liệu của tranh: ghi rõ trên thẻ
+                infos.append(Info("Ngoài tư liệu của bức tranh", desc["lead"], general=True))
+            else:
+                paragraphs.append(desc["lead"])
+        info_at = len(paragraphs)
+        if desc["info"]:
+            infos.append(Info(*desc["info"]))
+        paragraphs.append(desc["question"])
+        attachment = None
+        d = p.details.get(desc["detail"]) if desc["detail"] else None
+        if d:
+            attachment = DetailAttachment(d.key, d.chat_crop or d.crop, label=d.title)
+        return AuraTurn(paragraphs, [Choice(c) for c in desc["choices"]], stage=desc["stage"],
+                        attachment=attachment, infos=infos, info_at=info_at)
 
     def _sig(self, script_id: str) -> str:
         if script_id not in self._sigs:
@@ -234,12 +305,13 @@ class AuraChatbotEngine:
                 for o in options]
 
     @staticmethod
-    def _ack(session: _Session, r: dict, nav: bool) -> str:
+    def _ack(session: _Session, r: dict, nav: bool, typed: bool = False) -> str:
         """Câu đệm cho lượt vừa rồi. Rỗng khi engine đã có lời đệm riêng hoặc hội thoại kết thúc."""
         if r["ended"] or r["ack"]:
             return ""
         if r["contexts"]:
-            return CONTEXT_ACK
+            # người xem tự gõ câu hỏi: thẻ trả lời thẳng câu đó, không cần câu đệm chung chung
+            return "" if typed else CONTEXT_ACK
         if session.replies == 1:
             return FIRST_ACK
         pool = NAV_ACKS if nav else ANSWER_ACKS

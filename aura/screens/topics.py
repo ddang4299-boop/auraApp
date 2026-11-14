@@ -9,16 +9,16 @@ from __future__ import annotations
 import flet as ft
 
 from ..theme import GLASS_EDGE, GLASS_STRONG, BEIGE, BORDER, INK, MUTED, PRIMARY, TINT, WHITE
-from ..topics import ALL, CONCEPTS, GROUPS, KIND_NAME, TIMELINE, Topic
+from ..topics import ALL, CONCEPTS, GROUPS, KIND_NAME, TIMELINE, Topic, small_image
 from ..ui import (H, T, V, body, NAV_HOME, nav_bar, card, cropped_image, icon, kicker, screen,
                   top_bar)
 
 
 # ---------------------------------------------------------------------------- thẻ dùng chung
 def thumb(t: Topic, w: float, h: float, radius: float = 6) -> ft.Control:
-    """Ảnh nhỏ của một mục; mục không có ảnh thì hiện nhãn năm trên nền hồng."""
+    """Ảnh nhỏ của một mục (dùng bản thu nhỏ cho nhẹ); mục không có ảnh thì hiện nhãn năm trên nền hồng."""
     if t.image:
-        return cropped_image(t.image, t.aspect, w, h, t.crop, radius=radius)
+        return cropped_image(small_image(t.image), t.aspect, w, h, t.crop, radius=radius)
     return ft.Container(T(t.label, 15 if w < 90 else 22, 400, PRIMARY, serif=True), width=w, height=h,
                         bgcolor=TINT, border_radius=radius, alignment=ft.Alignment.CENTER)
 

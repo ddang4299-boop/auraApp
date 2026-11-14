@@ -278,6 +278,7 @@ def nav_bar(app, active: int) -> ft.Container:
     Chỉ dùng nền màu đặc và một lớp bóng tĩnh: KHÔNG làm mờ nền (blur), không có hiệu ứng chạy liên
     tục, nên nhẹ cho điện thoại yếu và cho máy chủ miễn phí."""
     items = []
+    pad = 12 if app.page_width >= 400 else (9 if app.page_width >= 350 else 6)   # điện thoại hẹp: thu lề
     for i, (ic, label, route) in enumerate(nav_items(app.current_pid)):
         on = i == active
         color = PRIMARY if on else MUTED
@@ -286,15 +287,38 @@ def nav_bar(app, active: int) -> ft.Container:
                        T(label, 10, 600 if on else 500, color, lh=1.1, no_wrap=True)],
                       spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             height=NAV_PILL_H - 10, border_radius=(NAV_PILL_H - 10) / 2,
-            padding=ft.Padding.symmetric(horizontal=12), alignment=ft.Alignment.CENTER,
+            padding=ft.Padding.symmetric(horizontal=pad), alignment=ft.Alignment.CENTER,
             bgcolor=NAV_ACTIVE_BG if on else None,
             on_click=lambda e, r=route: app.go(r)))
+    # Nút Scan ở giữa thanh: chưa có chức năng thật, bấm vào báo "sắp ra mắt"
+    items.insert(2, ft.Container(icon("scan-camera", 21, WHITE), width=44, height=44, border_radius=22,
+                                 bgcolor=PRIMARY, alignment=ft.Alignment.CENTER,
+                                 tooltip="Scan ảnh tác phẩm (sắp ra mắt)",
+                                 on_click=lambda e: scan_soon(app.page)))
     return ft.Container(
         ft.Row(items, spacing=2, tight=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         height=NAV_PILL_H, padding=4, bgcolor=NAV_BG, border_radius=NAV_PILL_H / 2,
         border=ft.Border.all(1, BORDER),
         shadow=[ft.BoxShadow(blur_radius=16, spread_radius=-4, offset=ft.Offset(0, 6),
                              color=f"{SHADOW_INK},0.16")])
+
+
+def scan_soon(page: ft.Page) -> None:
+    """Hộp thông báo nhẹ cho nút Scan ảnh (tính năng chưa ra mắt), cùng tông màu với app."""
+    page.show_dialog(ft.AlertDialog(
+        bgcolor=BG,
+        content=ft.Column([
+            ft.Container(icon("scan-camera", 30, PRIMARY), width=64, height=64, border_radius=32,
+                         bgcolor=TINT, alignment=ft.Alignment.CENTER),
+            V(14),
+            T("Scan ảnh tác phẩm", 21, serif=True, align=ft.TextAlign.CENTER),
+            V(8),
+            T("Tính năng Scan ảnh tác phẩm sẽ ra mắt trong bản cập nhật tới!", 13, 400, MUTED,
+              align=ft.TextAlign.CENTER),
+        ], spacing=0, tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        actions=[ft.TextButton(content=T("Đã hiểu", 13, 600, PRIMARY), on_click=lambda e: page.pop_dialog())],
+        actions_alignment=ft.MainAxisAlignment.CENTER,
+    ))
 
 
 def _status_bar() -> ft.Container:

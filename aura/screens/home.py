@@ -5,7 +5,9 @@ import re
 
 import flet as ft
 
-from ..data import MONA_LISA
+import datetime
+
+from ..data import ALL_PAINTINGS, Painting
 from ..theme import INK, MUTED, PRIMARY, WHITE
 from ..topics import (ALL, CONCEPTS, CONCEPTS_ON_HOME, FACTS, INTRO, PERIODS, TIMELINE,
                       TIMELINE_HIGHLIGHTS, Topic)
@@ -13,7 +15,21 @@ from ..ui import (H, T, V, avatar, body, NAV_HOME, nav_bar, bottom_sheet, card, 
                   icon, kicker, primary_button, screen)
 from .topics import concept_grid, more_button, thumb
 
-QUESTION_CROP = (0.0, 0.12, 1.0, 0.54)      # gương mặt Mona Lisa
+# Vùng ảnh cho mục "Câu hỏi hôm nay" (tranh nào không có ở đây thì dùng chi tiết đầu tiên của tranh)
+QUESTION_CROPS = {"mona-lisa": (0.0, 0.12, 1.0, 0.54)}      # gương mặt Mona Lisa
+
+
+def painting_of_the_day(today: datetime.date | None = None) -> Painting:
+    """Mỗi ngày một bức trong kho (xoay vòng), không gán cứng một tranh."""
+    day = (today or datetime.date.today()).toordinal()
+    return ALL_PAINTINGS[day % len(ALL_PAINTINGS)]
+
+
+def _question_crop(p: Painting) -> tuple:
+    if p.id in QUESTION_CROPS:
+        return QUESTION_CROPS[p.id]
+    d = next(iter(p.details.values()), None)
+    return d.crop if d else (0.0, 0.1, 1.0, 0.6)
 ON_WINE = "#F3E6E8"                          # chữ phụ trên nền đỏ rượu
 
 
@@ -107,6 +123,7 @@ def build(app, q) -> ft.View:
                    vertical_alignment=ft.CrossAxisAlignment.START)
     facts.data = "bleed"
     rest = len(CONCEPTS) - CONCEPTS_ON_HOME
+    day = painting_of_the_day()
     content = body([
         V(7.5),
         ft.Row([
@@ -123,13 +140,12 @@ def build(app, q) -> ft.View:
         V(21.5),
         kicker("Câu hỏi hôm nay", ls=1.0),
         V(11.5),
-        cropped_image(MONA_LISA.image, MONA_LISA.aspect, cw, 220, QUESTION_CROP,
-                      on_click=lambda e: app.go(f"/painting/{MONA_LISA.id}")),
+        cropped_image(day.image, day.aspect, cw, 220, _question_crop(day),
+                      on_click=lambda e: app.go(f"/painting/{day.id}")),
         V(8.5),
-        ft.Container(T("Tại sao Phục Hưng lại bắt đầu bằng việc nhìn kỹ hơn?", 24, serif=True),
-                     on_click=lambda e: app.go(f"/chat/{MONA_LISA.id}")),
+        ft.Container(T(day.teaser, 24, serif=True), on_click=lambda e: app.go(f"/chat/{day.id}")),
         V(7.5),
-        T(f"{MONA_LISA.artist} · Chi tiết từ {MONA_LISA.title}", 11, 400, MUTED),
+        T(f"{day.artist} · Chi tiết từ {day.title}", 11, 400, MUTED),
         V(25.5),
         divider(),
         V(21.5),

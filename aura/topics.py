@@ -37,7 +37,13 @@ def _img(name: str) -> str:
     return f"images/home/{name}.jpg"
 
 
-# Tỉ lệ khung ảnh (rộng/cao) sau khi thu nhỏ — xem get_images.py khi thay ảnh
+def small_image(src: str) -> str:
+    """Bản thu nhỏ (images/home/thumb/, cạnh dài 640px) cho thẻ nhỏ: nhẹ hơn 2-4 lần ảnh gốc.
+    Thay ảnh trong images/home/ thì chạy lại tools/make_thumbs.py."""
+    return src.replace("images/home/", "images/home/thumb/", 1) if src.startswith("images/home/") else src
+
+
+# Tỉ lệ khung ảnh (rộng/cao) của ảnh trong images/home/ (bản thu nhỏ giữ nguyên tỉ lệ)
 ASPECT = {
     "duomo": 1.276, "trinity": 0.620, "ghent": 1.368, "cosimo": 0.742, "gutenberg": 0.717,
     "venus": 1.592, "creation": 2.203, "athens": 1.289, "sack": 1.912, "copernicus": 0.619,

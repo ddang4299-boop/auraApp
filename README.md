@@ -37,7 +37,7 @@ main.py                 Điểm khởi chạy
 aura/
   theme.py              Màu, font, kích thước (lấy từ bản thiết kế)
   ui.py                 Component dùng chung: chữ, nút, chip, thẻ, top bar, thanh điều hướng nổi
-  data.py               Nội dung tranh: thông tin, chi tiết, quiz, câu hỏi nhanh dưới ô chat
+  data.py               Nội dung 5 bức tranh: thông tin, chi tiết, quiz, câu hỏi nhanh dưới ô chat
   topics.py             Nội dung trang Khám phá: thời kỳ, mốc thời gian, khái niệm
   socratic.py           Interface hội thoại (AuraTurn...) + kịch bản mẫu dự phòng + lưu/đọc lịch sử chat
   auth.py               Đăng nhập Google (OAuth 2.0 + PKCE)
@@ -46,7 +46,8 @@ aura/
     auth.py             Chào mừng (đăng nhập Google hoặc bỏ qua)
     home.py             Khám phá
     topics.py           Mốc thời gian, khái niệm, bài đọc chủ đề
-    gallery.py          Kho tranh · Đã lưu
+    gallery.py          Kho tranh kiểu phòng trưng bày (khung tranh, biển tên, bộ lọc) · Đã lưu
+    onboarding.py       Hướng dẫn 4 bước cho người mở app lần đầu
     painting.py         Tổng quan tranh
     viewer.py           Xem tranh phóng to
     chat.py             Hỏi Aura (trò chuyện Socrates, câu hỏi nhanh, bắt đầu lại)
@@ -58,6 +59,7 @@ aura/
 Chatbot/                Chatbot Socrates chạy theo kịch bản JSON
   aura_adapter.py       Cầu nối chatbot với màn chat (AuraChatbotEngine)
   engine.py, hub.py     Bộ máy chạy kịch bản, chọn tranh
+  generic.py            Hội thoại Socrates có AI cho tranh chưa có kịch bản JSON (lộ trình dựng từ data.py)
   qa.py                 Trả lời câu hỏi gõ tay dựa trên tư liệu của tranh (RAG) rồi bắc cầu về câu đang hỏi
   llm.py                Gọi LLM (tuỳ chọn), nhiều key / nhiều nhà cung cấp dự phòng
   library.py            Đọc và kiểm tra các file kịch bản
@@ -66,6 +68,10 @@ Chatbot/                Chatbot Socrates chạy theo kịch bản JSON
   build_hints.py        Sinh sẵn gợi ý cho từng câu hỏi trong kịch bản
   scripts/              Kịch bản: mỗi tranh một file <Tên_tranh>.json
 assets/                 Font, icon (Lucide), ảnh tranh, trang khung bản web (index.html)
+  fonts/web/            Font rút gọn (Latin + tiếng Việt) app thực sự dùng; font gốc ở fonts/
+  images/home/thumb/    Ảnh minh hoạ thu nhỏ cho các thẻ nhỏ; ảnh gốc ở images/home/
+tools/
+  optimize_assets.py    Tạo lại ảnh thu nhỏ, logo màn chờ, font rút gọn (chạy khi thay ảnh/font)
 tests/                  Kiểm thử luồng đăng nhập OAuth
 docs/
   DEPLOY.md             Hướng dẫn đưa app lên Render
@@ -90,9 +96,13 @@ requirements*.txt       Thư viện: app (requirements.txt), máy chủ (-server
 | `/profile` | Hồ sơ cá nhân |
 
 Thanh điều hướng nổi (dạng viên thuốc) có 4 nút: **Khám phá**, **Tác phẩm**, **Hỏi Aura**, **Tư liệu**;
-ba nút sau mở bức tranh đang xem. Điện thoại: thanh nổi ở cạnh dưới. Máy tính: thanh nằm ở góc trên bên phải.
+ba nút sau mở bức tranh đang xem (ảnh, tư liệu, câu hỏi nhanh và chatbot luôn theo đúng bức đó).
+Nút tròn ở giữa là **Scan ảnh tác phẩm** (chưa làm, bấm vào hiện thông báo sắp ra mắt).
+Điện thoại: thanh nổi ở cạnh dưới. Máy tính: thanh nằm ở góc trên bên phải.
 Cuộc trò chuyện được cất trong bộ nhớ của trình duyệt nên tải lại trang (F5) vẫn nói tiếp đúng chỗ;
 nút **Bắt đầu lại** trong màn chat xoá để trò chuyện từ đầu, đăng xuất cũng xoá.
+Lần đầu mở app có hướng dẫn 4 bước (Tiếp theo / Quay lại / Bỏ qua); đã xem thì không hiện lại
+(ghi nhớ trong trình duyệt, khoá `aura.onboarded`).
 
 ## Chatbot theo kịch bản
 
@@ -101,7 +111,11 @@ nút **Bắt đầu lại** trong màn chat xoá để trò chuyện từ đầu
 - Tranh có kịch bản trong `Chatbot/scripts/` chạy bằng chatbot của nhóm. Tên file khớp với `id`
   của tranh trong `aura/data.py`, không phân biệt hoa thường và dấu `-`/`_`
   (ví dụ `mona-lisa` ↔ `Mona_Lisa.json`).
-- Tranh chưa có kịch bản dùng kịch bản mẫu trong `aura/socratic.py`.
+- Tranh chưa có kịch bản (hiện là 4 tranh của National Gallery) dùng `Chatbot/generic.py`: lộ trình
+  ấn tượng đầu → từng điểm nhìn → chuyện phía sau → suy ngẫm, dựng từ dữ liệu tranh. Câu gõ tự do được
+  trả lời theo 3 bước: bàn thẳng vào ý người xem, thêm một thông tin thật từ tư liệu, rồi một câu hỏi
+  gợi mở mới dẫn về lộ trình. Thông tin ngoài tư liệu được gắn nhãn "Kiến thức chung"; con số không
+  có trong tư liệu (kích thước, tuổi...) thì không đoán. Không có AI vẫn chạy bằng lời viết sẵn.
 - Muốn đính kèm ảnh chi tiết khi hội thoại vào một nhánh, khai báo `chat_branches` của tranh
   trong `aura/data.py` (ví dụ `"BRANCH_2A": "face"`).
 
@@ -152,6 +166,15 @@ Nếu chưa có khoá, app hiện hộp thoại hướng dẫn kèm nút **Dùng
 > Lưu ý khi phát hành: luồng loopback phù hợp cho máy tính và bản thử trên điện thoại. Bản phát hành
 > chính thức trên Android/iOS nên chuyển sang Google Sign-In gốc hoặc Firebase Auth
 > (redirect bằng deep link) và **không** nhúng client secret vào app.
+
+## Bản web nhẹ và nhanh
+
+- Ảnh minh hoạ ở thẻ nhỏ, logo màn chờ và font đều dùng bản rút gọn (trang chủ tải ảnh ít hơn ~43%,
+  font ít hơn ~59%). Thay ảnh trong `assets/images/` hoặc font trong `assets/fonts/` thì chạy
+  `python tools/optimize_assets.py` để tạo lại.
+- Lúc mới mở, bản web đôi khi báo bề rộng tạm (~164px): app chờ bề rộng thật (tối đa 1,5 giây) rồi mới
+  dựng màn, nên mỗi lần mở chỉ dựng một lần (máy chủ miễn phí 0,1 CPU, dựng hai lần mất thêm ~1 giây).
+- Máy chủ Render nén sẵn các file lớn của Flutter (Brotli), không cần nén thêm trong app.
 
 ## Kiểm thử
 

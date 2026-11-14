@@ -26,6 +26,10 @@ CHATS_VERSION = 1
 APP_VERSION = "1.0.0"
 
 ROOT_ROUTES = {"/", "/home", "/gallery", "/saved"}
+# Bản web lúc mới mở hay báo bề rộng tạm (vd 164px). Điện thoại thật rộng ít nhất ~320px,
+# nên hẹp hơn TEMP_W thì coi là chưa biết khổ màn hình (xem AuraApp._waiting_width).
+TEMP_W = 300
+WIDTH_WAIT = 1.5
 
 
 @dataclass
@@ -113,6 +117,10 @@ class AuraApp:
         # thật: khi bề rộng đổi thì dựng lại các màn để ảnh/lưới tính theo đúng khổ màn hình.
         self._laid_out_width = self.page_width
         page.on_resize = self._on_resize
+        # Bề rộng tạm thì CHƯA dựng màn (máy chủ 0,1 CPU dựng hai lần mất thêm ~1 giây): chờ trình duyệt
+        # báo bề rộng thật rồi dựng một lần; quá WIDTH_WAIT giây không thấy báo thì dựng luôn.
+        self._waiting_width = self.page_width < TEMP_W
+        self._first_route = page.route or "/"
         # Dịch vụ của Flet: lưu trữ cục bộ và mở trình duyệt/URL.
         self.prefs = ft.SharedPreferences()
         self.launcher = ft.UrlLauncher()
@@ -128,7 +136,12 @@ class AuraApp:
         # Báo cho màn chat biết đã đọc xong cuộc trò chuyện cất từ lần trước (xem _restore_chats).
         self._chats_ready = asyncio.Event()
         page.views.clear()
-        self._on_route_change(None)
+        if self._waiting_width:
+            page.views.append(ft.View(route=self._first_route, bgcolor=BG))    # nền trống trong lúc chờ
+            page.update()
+            page.run_task(self._width_fallback)
+        else:
+            self._on_route_change(None)
         page.run_task(self._restore_session)
 
     # ---- kích thước -----------------------------------------------------------
@@ -216,11 +229,28 @@ class AuraApp:
     def rebuild(self) -> None:
         """Dựng lại màn hình hiện tại (sau khi đổi trạng thái lớn)."""
         views = self.page.views
-        if views:
+        if views and not self._waiting_width:
             views[-1] = self._build(views[-1].route)
             self.page.update()
 
+    def _end_wait(self) -> None:
+        """Đã biết bề rộng thật (hoặc chờ quá lâu): dựng màn đầu tiên đúng một lần."""
+        if not self._waiting_width:
+            return
+        self._waiting_width = False
+        self._laid_out_width = self.page_width
+        self.page.views.clear()
+        self._show(self._first_route)
+
+    async def _width_fallback(self) -> None:
+        await asyncio.sleep(WIDTH_WAIT)
+        self._end_wait()
+
     def _on_resize(self, e) -> None:
+        if self._waiting_width:
+            if self.page_width >= TEMP_W:
+                self._end_wait()
+            return
         if abs(self.page_width - self._laid_out_width) < 1:     # chỉ đổi chiều cao (vd bật bàn phím)
             return
         self._laid_out_width = self.page_width
@@ -238,6 +268,9 @@ class AuraApp:
         self._show(route)
 
     def _show(self, route: str) -> None:
+        if self._waiting_width:          # chưa biết khổ màn hình: nhớ màn cần mở, dựng khi biết
+            self._first_route = route
+            return
         views = self.page.views
         for i in range(len(views) - 1, -1, -1):          # quay lại màn đã có trong stack: chỉ gỡ
             if views[i].route == route:                  # các màn phía trên, không gửi lại cả màn
@@ -291,11 +324,19 @@ class AuraApp:
         return self.state.profile
 
     async def _restore_session(self) -> None:
-        """Đọc lại cuộc trò chuyện đang dở, rồi tự đăng nhập lại nếu đã lưu hồ sơ ở lần trước."""
+        """Đọc lại cuộc trò chuyện đang dở, tự đăng nhập lại nếu đã lưu hồ sơ, rồi mở hướng dẫn cho người mới."""
         try:
             await self._restore_chats()
         finally:
             self._chats_ready.set()
+        try:
+            await self._restore_profile()
+        finally:
+            await asyncio.sleep(0.6)       # để màn đầu tiên hiện xong rồi mới mở hộp hướng dẫn
+            from .screens import onboarding
+            await onboarding.maybe_show(self)
+
+    async def _restore_profile(self) -> None:
         try:
             raw = await self.prefs.get(PREFS_KEY)
         except Exception:

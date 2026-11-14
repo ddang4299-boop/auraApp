@@ -35,15 +35,17 @@ MAX_W = 560                     # bề rộng cột nội dung tối đa trên m
 WIDE_W = 980                    # từ bề rộng này trở lên: màn chat chia hai cột (tranh | chat)
 
 # ---- Font ------------------------------------------------------------------
+# Bản rút gọn trong fonts/web/ (chỉ chữ Latin + tiếng Việt, nhẹ hơn ~60%): trình duyệt tải hết font lúc mở
+# app nên font gốc ~2,4 MB làm lần mở đầu chậm. Font gốc vẫn ở fonts/; đổi font thì chạy tools/optimize_assets.py.
 FONTS = {
-    "Inter": "fonts/Inter-Regular.ttf",
-    "InterMedium": "fonts/Inter-Medium.ttf",
-    "InterSemiBold": "fonts/Inter-SemiBold.ttf",
-    "InterBold": "fonts/Inter-Bold.ttf",
-    "InterItalic": "fonts/Inter-Italic.ttf",
-    "Lora": "fonts/Lora-Regular.ttf",
-    "LoraMedium": "fonts/Lora-Medium.ttf",
-    "Montserrat": "fonts/Montserrat-SemiBold.ttf",
+    "Inter": "fonts/web/Inter-Regular.ttf",
+    "InterMedium": "fonts/web/Inter-Medium.ttf",
+    "InterSemiBold": "fonts/web/Inter-SemiBold.ttf",
+    "InterBold": "fonts/web/Inter-Bold.ttf",
+    "InterItalic": "fonts/web/Inter-Italic.ttf",
+    "Lora": "fonts/web/Lora-Regular.ttf",
+    "LoraMedium": "fonts/web/Lora-Medium.ttf",
+    "Montserrat": "fonts/web/Montserrat-SemiBold.ttf",
 }
 
 INTER_BY_WEIGHT = {400: "Inter", 500: "InterMedium", 600: "InterSemiBold", 700: "InterBold"}
